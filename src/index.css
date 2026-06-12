@@ -1,0 +1,154 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Rubik', system-ui, sans-serif;
+  --color-bg: #0b0e17;
+  --color-surface: rgba(255, 255, 255, 0.05);
+  --color-fire-from: #f97316;
+  --color-fire-to: #f43f5e;
+  --color-water: #38bdf8;
+  --color-protein: #a78bfa;
+  --color-carbs: #fbbf24;
+  --color-fat: #34d399;
+}
+
+html {
+  font-family: var(--font-sans);
+}
+
+body {
+  background-color: var(--color-bg);
+  color: #f1f5f9;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* רקע גרדיאנט חי */
+.bg-orbs {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: radial-gradient(ellipse at top, #131829 0%, #0b0e17 60%);
+}
+.orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.35;
+  animation: float 14s ease-in-out infinite alternate;
+}
+.orb-1 {
+  width: 320px;
+  height: 320px;
+  background: linear-gradient(135deg, #f97316, #f43f5e);
+  top: -80px;
+  inset-inline-start: -60px;
+}
+.orb-2 {
+  width: 260px;
+  height: 260px;
+  background: linear-gradient(135deg, #7c3aed, #f43f5e);
+  bottom: 10%;
+  inset-inline-end: -80px;
+  animation-delay: -5s;
+}
+.orb-3 {
+  width: 200px;
+  height: 200px;
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  top: 45%;
+  inset-inline-start: 20%;
+  animation-delay: -9s;
+}
+@keyframes float {
+  from {
+    transform: translateY(0) scale(1);
+  }
+  to {
+    transform: translateY(40px) scale(1.15);
+  }
+}
+
+/* כרטיס זכוכית */
+.glass {
+  background: rgba(255, 255, 255, 0.055);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #fb923c, #f43f5e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.btn-fire {
+  background: linear-gradient(135deg, #f97316, #f43f5e);
+  box-shadow: 0 6px 24px rgba(244, 63, 94, 0.4);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+.btn-fire:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 8px 32px rgba(244, 63, 94, 0.55);
+}
+.btn-fire:active {
+  transform: scale(0.96);
+  filter: brightness(1.1);
+}
+
+.press {
+  transition: transform 0.15s ease, background-color 0.2s ease;
+  cursor: pointer;
+}
+.press:active {
+  transform: scale(0.96);
+}
+
+/* אנימציית כניסה */
+.fade-up {
+  animation: fadeUp 0.4s ease-out both;
+}
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* טבעת קלוריות */
+.ring-progress {
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* גלים במד המים */
+.water-fill {
+  transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
