@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api, todayStr } from '../api.js';
 import { MEAL_TYPES } from '../components/MealList.jsx';
 import { ArrowRight, Search, Check, PencilLine } from 'lucide-react';
 
 export default function AddMeal() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const selectedDate = searchParams.get('date') || todayStr();
   const [foods, setFoods] = useState([]);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(null);
@@ -14,16 +16,33 @@ export default function AddMeal() {
   const [manual, setManual] = useState(false);
   const [manualFood, setManualFood] = useState({ name: '', calories: '', protein: '', carbs: '', fat: '' });
   const [saving, setSaving] = useState(false);
+  const [loadingFoods, setLoadingFoods] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    api.foods.list().then(setFoods).catch((e) => setError(e.message));
-  }, []);
-
-  const filtered = useMemo(() => {
-    if (!query.trim()) return foods;
-    return foods.filter((f) => f.name.includes(query.trim()));
-  }, [foods, query]);
+    const controller = new AbortController();
+    let active = true;
+    const timer = setTimeout(() => {
+      setError(null);
+      setLoadingFoods(true);
+      api.foods
+        .list(query.trim(), controller.signal)
+        .then((results) => {
+          if (active) setFoods(results);
+        })
+        .catch((err) => {
+          if (active && err.name !== 'AbortError') setError(err.message);
+        })
+        .finally(() => {
+          if (active) setLoadingFoods(false);
+        });
+    }, query.trim() ? 300 : 0);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
 
   const calc = useMemo(() => {
     if (!selected || !amount) return null;
@@ -47,7 +66,7 @@ export default function AddMeal() {
     try {
       const body = manual
         ? {
-            date: todayStr(),
+            date: selectedDate,
             meal_type: mealType,
             food_name: manualFood.name.trim(),
             amount: null,
@@ -57,7 +76,7 @@ export default function AddMeal() {
             fat: Number(manualFood.fat) || 0,
           }
         : {
-            date: todayStr(),
+            date: selectedDate,
             meal_type: mealType,
             food_name: selected.name,
             amount: Number(amount),
@@ -68,7 +87,22 @@ export default function AddMeal() {
             fat: Math.round(calc.fat * 10) / 10,
           };
       await api.meals.create(body);
-      navigate('/');
+      // הזנה ידנית נשמרת גם בתפריט (הקטלוג) כדי שתהיה זמינה לחיפוש בעתיד עם כל הפרטים.
+      // best-effort: כישלון (למשל שם שכבר קיים) לא יבטל את שמירת הארוחה.
+      if (manual) {
+        api.foods
+          .create({
+            name: manualFood.name.trim(),
+            calories_per_100: Number(manualFood.calories),
+            protein_per_100: Number(manualFood.protein) || 0,
+            carbs_per_100: Number(manualFood.carbs) || 0,
+            fat_per_100: Number(manualFood.fat) || 0,
+            default_amount: 100,
+            unit: 'גרם',
+          })
+          .catch(() => {});
+      }
+      navigate(`/?date=${selectedDate}`);
     } catch (err) {
       setError(err.message);
       setSaving(false);
@@ -88,6 +122,11 @@ export default function AddMeal() {
         <h1 className="text-2xl font-extrabold">
           הוספת <span className="gradient-text">ארוחה</span>
         </h1>
+        {selectedDate !== todayStr() && (
+          <span className="rounded-full bg-orange-500/15 px-3 py-1 text-xs font-medium text-orange-300">
+            {new Date(`${selectedDate}T12:00:00`).toLocaleDateString('he-IL')}
+          </span>
+        )}
       </header>
 
       <div className="space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 lg:space-y-0">
@@ -145,7 +184,12 @@ export default function AddMeal() {
           </div>
 
           <ul className="fade-up max-h-72 space-y-2 overflow-y-auto pe-1 lg:max-h-[28rem]">
-            {filtered.map((f) => (
+            {loadingFoods && (
+              <li className="glass p-5 text-center text-sm text-slate-400" role="status">
+                טוען מאכלים...
+              </li>
+            )}
+            {foods.map((f) => (
               <li key={f.id}>
                 <button
                   onClick={() => {
@@ -168,7 +212,7 @@ export default function AddMeal() {
                 </button>
               </li>
             ))}
-            {filtered.length === 0 && (
+            {!loadingFoods && foods.length === 0 && (
               <li className="glass p-5 text-center text-sm text-slate-400">
                 לא נמצא "{query}" — נסה הזנה ידנית
               </li>

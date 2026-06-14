@@ -1,4 +1,5 @@
-import { Sunrise, Sun, Moon, Cookie, Trash2, UtensilsCrossed } from 'lucide-react';
+import { useState } from 'react';
+import { Sunrise, Sun, Moon, Cookie, Trash2, UtensilsCrossed, Copy, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export const MEAL_TYPES = [
@@ -8,8 +9,24 @@ export const MEAL_TYPES = [
   { key: 'snack', label: 'ביניים / נשנוש', Icon: Cookie },
 ];
 
-export default function MealList({ meals, onRemove }) {
+export default function MealList({ meals, onRemove, onDuplicate, addDate }) {
   const navigate = useNavigate();
+  const [duplicatedId, setDuplicatedId] = useState(null);
+  const [duplicatingId, setDuplicatingId] = useState(null);
+
+  const duplicate = async (id) => {
+    if (duplicatingId) return;
+    setDuplicatingId(id);
+    try {
+      const succeeded = await onDuplicate(id);
+      if (succeeded) {
+        setDuplicatedId(id);
+        setTimeout(() => setDuplicatedId(null), 1800);
+      }
+    } finally {
+      setDuplicatingId(null);
+    }
+  };
 
   if (meals.length === 0) {
     return (
@@ -18,7 +35,7 @@ export default function MealList({ meals, onRemove }) {
         <p className="text-slate-300 font-medium">עוד לא נרשמו ארוחות היום</p>
         <p className="text-sm text-slate-500">כל ארוחה מקרבת אותך ליעד המסה 💪</p>
         <button
-          onClick={() => navigate('/add')}
+          onClick={() => navigate(`/add?date=${addDate}`)}
           className="btn-fire press mt-1 rounded-full px-6 py-2.5 font-semibold text-white"
         >
           + הוסף ארוחה ראשונה
@@ -58,6 +75,14 @@ export default function MealList({ meals, onRemove }) {
                     <span className="text-sm font-semibold tabular-nums text-slate-200">
                       {Math.round(m.calories)}
                     </span>
+                    <button
+                      onClick={() => duplicate(m.id)}
+                      disabled={duplicatingId === m.id}
+                      className="press flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-emerald-500/15 hover:text-emerald-400"
+                      aria-label={`שכפול ${m.food_name} להיום`}
+                    >
+                      {duplicatedId === m.id ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+                    </button>
                     <button
                       onClick={() => onRemove(m.id)}
                       className="press flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-rose-500/15 hover:text-rose-400"

@@ -1,10 +1,22 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import BottomNav from './components/BottomNav.jsx';
 import Sidebar from './components/Sidebar.jsx';
-import Home from './pages/Home.jsx';
-import AddMeal from './pages/AddMeal.jsx';
-import Progress from './pages/Progress.jsx';
-import Profile from './pages/Profile.jsx';
+
+const Home = lazy(() => import('./pages/Home.jsx'));
+const AddMeal = lazy(() => import('./pages/AddMeal.jsx'));
+const Progress = lazy(() => import('./pages/Progress.jsx'));
+const Profile = lazy(() => import('./pages/Profile.jsx'));
+
+function PageFallback() {
+  return (
+    <div className="space-y-4 animate-pulse" role="status" aria-label="טוען מסך">
+      <div className="glass h-24" />
+      <div className="glass h-64" />
+      <span className="sr-only">טוען...</span>
+    </div>
+  );
+}
 
 export default function App() {
   return (
@@ -14,17 +26,20 @@ export default function App() {
         <div className="orb orb-2" />
         <div className="orb orb-3" />
       </div>
+      <div className="grain" aria-hidden="true" />
 
       <Sidebar />
 
       <div className="lg:ms-64">
         <main className="mx-auto max-w-md px-4 pt-6 pb-32 lg:max-w-5xl lg:px-10 lg:pt-10 lg:pb-16">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/add" element={<AddMeal />} />
-            <Route path="/progress" element={<Progress />} />
-            <Route path="/profile" element={<Profile />} />
-          </Routes>
+          <Suspense fallback={<PageFallback />}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/add" element={<AddMeal />} />
+              <Route path="/progress" element={<Progress />} />
+              <Route path="/profile" element={<Profile />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
 

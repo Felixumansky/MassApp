@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "PowerShell(git config --global user.name)",
-      "PowerShell(git config --global user.email)"
+      "PowerShell(git config --global user.email)",
+      "Bash(curl -s \"http://localhost:4000/api/summary?date=2026-06-13\")",
+      "Bash(curl -s \"http://localhost:4000/api/profile\")",
+      "Bash(curl -s \"http://localhost:4000/api/health\")",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:4000/api/foods?q=%D7%90%D7%95%D7%A8%D7%96\" -UseBasicParsing -TimeoutSec 5; \"STATUS: $\\($r.StatusCode\\)\"; $r.Content.Substring\\(0,[Math]::Min\\(800,$r.Content.Length\\)\\) } catch { \"ERR: $\\($_.Exception.Message\\)\" })",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:4000/api/health\" -UseBasicParsing -TimeoutSec 5; \"HEALTH: $\\($r.StatusCode\\) $\\($r.Content\\)\" } catch { \"ERR: $\\($_.Exception.Message\\)\" })",
+      "Bash(npx eslint *)",
+      "Bash(echo \"---EXIT:$?---\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\DEV\\Desktop\\GitHub\\GitHub\\MassAPI\\src\\routes"
     ]
   }
 }

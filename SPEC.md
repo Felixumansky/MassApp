@@ -54,6 +54,7 @@ Supabase (DB)     PostgreSQL                   ענן
 | `meals` | יומן ארוחות | date, meal_type, food_name, amount, calories, protein, carbs, fat |
 | `water_logs` | יומן מים | date, amount_ml |
 | `weight_logs` | מעקב משקל | date (unique), weight |
+| `daily_checkins` | צ'ק־אין יומי | date (unique), trained, sleep_hours, appetite, note |
 
 ## API (MassAPI, פורט 4000)
 
@@ -67,6 +68,8 @@ Supabase (DB)     PostgreSQL                   ענן
 | POST/DELETE | `/api/water` | הוספת/מחיקת מים |
 | GET/POST | `/api/weights` | היסטוריית משקל / שקילה חדשה |
 | GET | `/api/history?days=7` | קלוריות יומיות לגרף |
+| GET/PUT | `/api/checkins?date=` | קריאה ושמירת צ'ק־אין יומי |
+| GET | `/api/insights?days=30&end=` | מדדי עקביות ועמידה ביעדים |
 
 ## מסכים (ניווט תחתון, 4 פריטים + FAB)
 

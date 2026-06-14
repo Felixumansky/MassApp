@@ -29,16 +29,24 @@ export default function Sidebar() {
         <NavLink
           key={to}
           to={to}
+          end={to === '/'}
           className={({ isActive }) =>
-            `press flex items-center gap-3 rounded-2xl px-4 py-3 font-medium transition-colors ${
+            `press relative flex items-center gap-3 rounded-2xl px-4 py-3 font-medium transition-colors ${
               isActive
-                ? 'bg-orange-500/15 text-orange-300'
+                ? 'bg-gradient-to-l from-orange-500/20 to-rose-500/10 text-orange-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
                 : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
             }`
           }
         >
-          <Icon size={20} aria-hidden="true" />
-          {label}
+          {({ isActive }) => (
+            <>
+              {isActive && (
+                <span className="absolute inset-y-2 start-0 w-1 rounded-full bg-gradient-to-b from-orange-400 to-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.8)]" aria-hidden="true" />
+              )}
+              <Icon size={20} aria-hidden="true" />
+              {label}
+            </>
+          )}
         </NavLink>
       ))}
 

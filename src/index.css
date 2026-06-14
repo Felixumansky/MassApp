@@ -2,18 +2,58 @@
 
 @theme {
   --font-sans: 'Rubik', system-ui, sans-serif;
-  --color-bg: #0b0e17;
+
+  /* base palette */
+  --color-bg: #070912;
   --color-surface: rgba(255, 255, 255, 0.05);
-  --color-fire-from: #f97316;
+
+  /* accent system */
+  --color-fire-from: #ff8a3d;
   --color-fire-to: #f43f5e;
   --color-water: #38bdf8;
   --color-protein: #a78bfa;
   --color-carbs: #fbbf24;
   --color-fat: #34d399;
+
+  /* shadcn/ui tokens (used by <Card /> and friends) */
+  --color-card: #0b0e17;
+  --color-card-foreground: #f1f5f9;
+  --color-muted-foreground: #94a3b8;
+  --color-border: rgba(255, 255, 255, 0.09);
+
+  /* Aceternity spotlight sweep */
+  --animate-spotlight: spotlight 2s ease 0.75s 1 forwards;
+}
+
+@keyframes spotlight {
+  0% {
+    opacity: 0;
+    transform: translate(-72%, -62%) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -40%) scale(1);
+  }
+}
+
+/* Spinner for the Spline <Suspense> fallback */
+.loader {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 9999px;
+  animation: loader-spin 0.8s linear infinite;
+}
+@keyframes loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 html {
   font-family: var(--font-sans);
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -22,117 +62,261 @@ body {
   min-height: 100dvh;
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* רקע גרדיאנט חי */
+::selection {
+  background: rgba(249, 115, 22, 0.35);
+  color: #fff;
+}
+
+/* ---- premium scrollbar ---- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+/* ===========================================================
+   Aurora background — layered mesh, drifting orbs, fine grain
+   =========================================================== */
 .bg-orbs {
   position: fixed;
   inset: 0;
   z-index: -1;
   overflow: hidden;
-  background: radial-gradient(ellipse at top, #131829 0%, #0b0e17 60%);
+  background:
+    radial-gradient(1200px 700px at 75% -10%, rgba(244, 63, 94, 0.16), transparent 60%),
+    radial-gradient(900px 600px at 10% 0%, rgba(124, 58, 237, 0.16), transparent 55%),
+    radial-gradient(1000px 800px at 50% 110%, rgba(14, 165, 233, 0.12), transparent 60%),
+    radial-gradient(ellipse at top, #12172a 0%, #070912 62%);
+}
+/* faint blueprint grid for depth */
+.bg-orbs::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 0%, transparent 75%);
 }
 .orb {
   position: absolute;
   border-radius: 9999px;
-  filter: blur(90px);
-  opacity: 0.35;
-  animation: float 14s ease-in-out infinite alternate;
+  filter: blur(95px);
+  opacity: 0.5;
+  mix-blend-mode: screen;
+  animation: float 16s ease-in-out infinite alternate;
+  will-change: transform;
 }
 .orb-1 {
-  width: 320px;
-  height: 320px;
-  background: linear-gradient(135deg, #f97316, #f43f5e);
-  top: -80px;
-  inset-inline-start: -60px;
+  width: 360px;
+  height: 360px;
+  background: radial-gradient(circle at 30% 30%, #ff8a3d, #f43f5e 70%);
+  top: -90px;
+  inset-inline-start: -70px;
 }
 .orb-2 {
-  width: 260px;
-  height: 260px;
-  background: linear-gradient(135deg, #7c3aed, #f43f5e);
-  bottom: 10%;
-  inset-inline-end: -80px;
-  animation-delay: -5s;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle at 30% 30%, #a855f7, #6366f1 70%);
+  bottom: 8%;
+  inset-inline-end: -90px;
+  animation-delay: -6s;
 }
 .orb-3 {
-  width: 200px;
-  height: 200px;
-  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
-  top: 45%;
-  inset-inline-start: 20%;
-  animation-delay: -9s;
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle at 30% 30%, #38bdf8, #0ea5e9 70%);
+  top: 42%;
+  inset-inline-start: 18%;
+  animation-delay: -11s;
 }
 @keyframes float {
   from {
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
   to {
-    transform: translateY(40px) scale(1.15);
+    transform: translate3d(24px, 46px, 0) scale(1.18);
   }
 }
 
-/* כרטיס זכוכית */
-.glass {
-  background: rgba(255, 255, 255, 0.055);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 1.5rem;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+/* fine film grain overlay for a tactile, premium feel */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
+/* ===========================================================
+   Glass surfaces — gradient hairline border + top sheen
+   =========================================================== */
+.glass {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.02) 55%);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  border-radius: 1.65rem;
+  box-shadow:
+    0 18px 48px -20px rgba(0, 0, 0, 0.75),
+    0 2px 10px -4px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+/* gradient hairline border drawn with mask-compositing */
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    160deg,
+    rgba(255, 255, 255, 0.34),
+    rgba(255, 255, 255, 0.06) 38%,
+    rgba(255, 255, 255, 0) 62%
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* a slightly brighter, more elevated card */
+.glass-strong {
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03) 60%);
+}
+
+/* accent glows — drop them on hero elements */
+.glow-fire {
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.2), 0 12px 40px -10px rgba(244, 63, 94, 0.45);
+}
+
+/* ===========================================================
+   Text & buttons
+   =========================================================== */
 .gradient-text {
-  background: linear-gradient(135deg, #fb923c, #f43f5e);
+  background: linear-gradient(120deg, #ffb152, #fb7185 55%, #f43f5e);
+  background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+  animation: textShine 6s ease-in-out infinite alternate;
+}
+@keyframes textShine {
+  to {
+    background-position: 200% center;
+  }
 }
 
 .btn-fire {
-  background: linear-gradient(135deg, #f97316, #f43f5e);
-  box-shadow: 0 6px 24px rgba(244, 63, 94, 0.4);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ff8a3d, #f43f5e);
+  box-shadow:
+    0 8px 28px -6px rgba(244, 63, 94, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
   transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
+/* moving sheen */
+.btn-fire::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+  transform: translateX(-130%);
+  transition: transform 0.7s ease;
+}
 .btn-fire:hover {
-  filter: brightness(1.1);
-  box-shadow: 0 8px 32px rgba(244, 63, 94, 0.55);
+  filter: brightness(1.07);
+  box-shadow:
+    0 12px 38px -6px rgba(244, 63, 94, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.btn-fire:hover::after {
+  transform: translateX(130%);
 }
 .btn-fire:active {
   transform: scale(0.96);
-  filter: brightness(1.1);
 }
 
 .press {
-  transition: transform 0.15s ease, background-color 0.2s ease;
+  transition: transform 0.15s ease, background-color 0.2s ease, color 0.2s ease;
   cursor: pointer;
 }
 .press:active {
-  transform: scale(0.96);
+  transform: scale(0.95);
 }
 
-/* אנימציית כניסה */
+/* ===========================================================
+   Entrance animations (with optional --d stagger delay)
+   =========================================================== */
 .fade-up {
-  animation: fadeUp 0.4s ease-out both;
+  animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--d, 0s);
 }
 @keyframes fadeUp {
   from {
     opacity: 0;
-    transform: translateY(14px);
+    transform: translateY(18px) scale(0.985);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* gentle pulse for live/glow accents */
+.pulse-glow {
+  animation: pulseGlow 2.6s ease-in-out infinite;
+}
+@keyframes pulseGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(251, 146, 60, 0.5));
+  }
+  50% {
+    filter: drop-shadow(0 0 14px rgba(251, 146, 60, 0.95));
+  }
+}
+
+/* shimmer for progress bars */
+@keyframes barShimmer {
+  to {
+    background-position: 200% center;
   }
 }
 
 /* טבעת קלוריות */
 .ring-progress {
-  transition: stroke-dashoffset 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: stroke-dashoffset 1s cubic-bezier(0.22, 1, 0.36, 1);
+  filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.55));
 }
 
 /* גלים במד המים */
 .water-fill {
-  transition: height 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: height 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 input[type='number'] {
@@ -149,6 +333,7 @@ input::-webkit-inner-spin-button {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
