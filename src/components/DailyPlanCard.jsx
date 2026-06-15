@@ -70,10 +70,10 @@ export default function DailyPlanCard({
 
 function PlanMetric({ Icon, value, unit, label, color }) {
   return (
-    <div className="rounded-2xl bg-white/5 p-3 text-center">
-      <Icon size={17} className={`mx-auto ${color}`} aria-hidden="true" />
-      <div className="mt-1 text-lg font-extrabold tabular-nums text-slate-100">{value}</div>
-      <div className="text-[10px] text-slate-500">{unit} {label}</div>
+    <div className="rounded-2xl border border-white/5 bg-white/[0.04] p-3 text-center">
+      <Icon size={18} className={`mx-auto ${color}`} aria-hidden="true" />
+      <div className="mt-1.5 text-xl font-extrabold tabular-nums text-slate-50">{value}</div>
+      <div className="text-[10px] font-medium text-slate-500">{unit} {label}</div>
     </div>
   );
 }

@@ -170,7 +170,7 @@ export default function Progress() {
                 />
                 <YAxis domain={['dataMin - 1', 'dataMax + 1']} tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ background: '#161b2c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#f1f5f9' }}
+                  contentStyle={{ background: 'rgba(14,19,34,0.92)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, boxShadow: '0 12px 32px -12px rgba(0,0,0,0.7)', color: '#f1f5f9' }}
                   formatter={(v) => [`${v} ק"ג`, 'משקל']}
                   labelFormatter={(d) => new Date(`${d}T12:00:00`).toLocaleDateString('he-IL')}
                 />
@@ -198,7 +198,7 @@ export default function Progress() {
               <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
               <Tooltip
                 cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                contentStyle={{ background: '#161b2c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#f1f5f9' }}
+                contentStyle={{ background: 'rgba(14,19,34,0.92)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, boxShadow: '0 12px 32px -12px rgba(0,0,0,0.7)', color: '#f1f5f9' }}
                 formatter={(v) => [`${Math.round(v)} קק"ל`, 'קלוריות']}
               />
               {target && <ReferenceLine y={target} stroke="#fb923c" strokeDasharray="6 4" label={{ value: 'יעד', fill: '#fb923c', fontSize: 11, position: 'insideTopRight' }} />}
@@ -226,7 +226,7 @@ export default function Progress() {
               />
               <Tooltip
                 cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                contentStyle={{ background: '#161b2c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#f1f5f9' }}
+                contentStyle={{ background: 'rgba(14,19,34,0.92)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, boxShadow: '0 12px 32px -12px rgba(0,0,0,0.7)', color: '#f1f5f9' }}
                 formatter={(v) => [`${(v / 1000).toFixed(2).replace(/\.?0+$/, '')} ליטר`, 'מים']}
               />
               {waterTarget && <ReferenceLine y={waterTarget} stroke="#38bdf8" strokeDasharray="6 4" label={{ value: 'יעד', fill: '#38bdf8', fontSize: 11, position: 'insideTopRight' }} />}
@@ -254,7 +254,7 @@ export default function Progress() {
                 <YAxis allowDecimals={false} domain={[0, 7]} tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip
                   cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                  contentStyle={{ background: '#161b2c', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, color: '#f1f5f9' }}
+                  contentStyle={{ background: 'rgba(14,19,34,0.92)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 14, boxShadow: '0 12px 32px -12px rgba(0,0,0,0.7)', color: '#f1f5f9' }}
                   formatter={(v) => [`${v} אימונים`, 'בשבוע']}
                   labelFormatter={(l) => `שבוע של ${l}`}
                 />
@@ -271,20 +271,25 @@ export default function Progress() {
 
 function InsightStat({ Icon, value, label, unit, color }) {
   return (
-    <div className="rounded-2xl bg-white/5 p-3">
-      <Icon size={17} className={color} />
-      <div className="mt-2 text-xl font-extrabold tabular-nums text-slate-100">
-        {value} <span className="text-xs font-normal text-slate-500">{unit}</span>
+    <div className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/[0.04] p-3">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/5">
+        <Icon size={18} className={color} />
+      </span>
+      <div className="min-w-0">
+        <div className="text-xl font-extrabold leading-tight tabular-nums text-slate-100">
+          {value}
+          {unit && <span className="ms-1 text-xs font-normal text-slate-500">{unit}</span>}
+        </div>
+        <p className="truncate text-xs text-slate-400">{label}</p>
       </div>
-      <p className="text-xs text-slate-400">{label}</p>
     </div>
   );
 }
 
 function GoalStat({ label, value }) {
   return (
-    <div className="rounded-xl bg-white/5 p-2">
-      <b className="block text-base text-slate-200">{value}/30</b>
+    <div className="rounded-xl border border-white/5 bg-white/[0.04] p-2">
+      <b className="block text-base text-slate-100">{value}/30</b>
       {label}
     </div>
   );

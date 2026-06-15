@@ -52,9 +52,11 @@ export default function MealList({ meals, onRemove, onDuplicate, addDate }) {
         const totalCal = items.reduce((s, m) => s + Number(m.calories), 0);
         return (
           <section key={key} className="glass fade-up p-4" aria-label={label}>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="flex items-center gap-2 font-semibold text-slate-200">
-                <Icon size={18} className="text-orange-400" aria-hidden="true" />
+            <div className="mb-2.5 flex items-center justify-between">
+              <h3 className="flex items-center gap-2.5 font-bold text-slate-100">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-500/15 text-orange-400">
+                  <Icon size={17} aria-hidden="true" />
+                </span>
                 {label}
               </h3>
               <span className="text-sm font-bold tabular-nums gradient-text">
@@ -71,24 +73,24 @@ export default function MealList({ meals, onRemove, onDuplicate, addDate }) {
                       ח {Math.round(m.protein)} · פ {Math.round(m.carbs)} · ש {Math.round(m.fat)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-sm font-semibold tabular-nums text-slate-200">
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <span className="me-1 text-sm font-bold tabular-nums text-slate-100">
                       {Math.round(m.calories)}
                     </span>
                     <button
                       onClick={() => duplicate(m.id)}
                       disabled={duplicatingId === m.id}
-                      className="press flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-emerald-500/15 hover:text-emerald-400"
+                      className="press flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-emerald-500/15 hover:text-emerald-400"
                       aria-label={`שכפול ${m.food_name} להיום`}
                     >
-                      {duplicatedId === m.id ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
+                      {duplicatedId === m.id ? <Check size={17} className="text-emerald-400" /> : <Copy size={17} />}
                     </button>
                     <button
                       onClick={() => onRemove(m.id)}
-                      className="press flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-rose-500/15 hover:text-rose-400"
+                      className="press flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-rose-500/15 hover:text-rose-400"
                       aria-label={`מחיקת ${m.food_name}`}
                     >
-                      <Trash2 size={16} aria-hidden="true" />
+                      <Trash2 size={17} aria-hidden="true" />
                     </button>
                   </div>
                 </li>

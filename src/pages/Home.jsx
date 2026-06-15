@@ -61,10 +61,10 @@ export default function Home() {
 
   if (!data) {
     return (
-      <div className="space-y-4 animate-pulse" aria-label="טוען...">
-        <div className="glass h-64" />
-        <div className="glass h-40" />
-        <div className="glass h-32" />
+      <div className="space-y-4" aria-label="טוען..." role="status">
+        <div className="skeleton glass h-64" />
+        <div className="skeleton glass h-40" />
+        <div className="skeleton glass h-32" />
       </div>
     );
   }
@@ -136,15 +136,15 @@ export default function Home() {
 
   return (
     <div className="space-y-4">
-      <header className="fade-up flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-orange-300/70">MassApp</p>
-          <h1 className="text-2xl font-extrabold">
+      <header className="fade-up flex items-center justify-between gap-3 pe-14 lg:pe-0">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-orange-300/70">MassApp</p>
+          <h1 className="mt-0.5 text-3xl font-extrabold leading-tight">
             שלום, <span className="gradient-text">{profile.name || 'אלוף'}</span>
           </h1>
-          <p className="text-sm text-slate-400">{isToday ? dayName : displayDate}</p>
+          <p className="mt-0.5 text-sm text-slate-400">{isToday ? dayName : displayDate}</p>
         </div>
-        <div className="btn-fire flex h-12 w-12 items-center justify-center rounded-2xl text-white">
+        <div className="btn-fire hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white lg:flex">
           <Dumbbell size={24} aria-hidden="true" />
         </div>
       </header>

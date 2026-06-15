@@ -82,9 +82,12 @@ export default function Profile() {
         </h2>
         <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-x-8 lg:gap-y-4 lg:space-y-0">
           {FIELDS.map(({ key, label, unit, color }) => (
-            <div key={key} className="flex items-center justify-between gap-3">
+            <div
+              key={key}
+              className="flex items-center justify-between gap-3 rounded-2xl border border-white/5 bg-white/[0.03] p-3"
+            >
               <label htmlFor={key} className="text-sm font-medium text-slate-300">
-                {label} <span className={`text-xs ${color}`}>({unit})</span>
+                {label} <span className={`text-xs font-semibold ${color}`}>({unit})</span>
               </label>
               <input
                 id={key}

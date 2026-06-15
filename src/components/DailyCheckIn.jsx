@@ -159,16 +159,19 @@ export default function DailyCheckIn({ date }) {
               <span className="mb-2 flex items-center gap-2 text-xs font-medium text-slate-400">
                 <Utensils size={15} className="text-orange-300" /> תיאבון
               </span>
-              <div className="flex justify-between" role="radiogroup" aria-label="דירוג תיאבון">
+              <div className="flex justify-between gap-1.5" role="radiogroup" aria-label="דירוג תיאבון">
                 {[1, 2, 3, 4, 5].map((value) => (
                   <button
                     key={value}
                     type="button"
                     role="radio"
                     aria-checked={form.appetite === value}
+                    aria-label={`תיאבון ${value} מתוך 5`}
                     onClick={() => setForm({ ...form, appetite: value })}
-                    className={`press h-8 w-8 rounded-full text-sm font-bold ${
-                      form.appetite === value ? 'bg-orange-500 text-white' : 'bg-white/5 text-slate-400'
+                    className={`press flex h-11 flex-1 items-center justify-center rounded-xl text-sm font-bold ${
+                      form.appetite === value
+                        ? 'bg-gradient-to-br from-orange-500 to-rose-500 text-white shadow-[0_4px_12px_-4px_rgba(244,63,94,0.6)]'
+                        : 'bg-white/5 text-slate-400 hover:bg-white/10'
                     }`}
                   >
                     {value}

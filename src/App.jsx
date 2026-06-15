@@ -10,9 +10,9 @@ const Profile = lazy(() => import('./pages/Profile.jsx'));
 
 function PageFallback() {
   return (
-    <div className="space-y-4 animate-pulse" role="status" aria-label="טוען מסך">
-      <div className="glass h-24" />
-      <div className="glass h-64" />
+    <div className="space-y-4" role="status" aria-label="טוען מסך">
+      <div className="skeleton glass h-24" />
+      <div className="skeleton glass h-64" />
       <span className="sr-only">טוען...</span>
     </div>
   );

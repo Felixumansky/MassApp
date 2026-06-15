@@ -43,8 +43,12 @@ export default function CalorieRing({ consumed, target }) {
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
       {/* soft glow halo behind the ring */}
       <div
-        className="absolute inset-6 rounded-full opacity-60 blur-2xl"
-        style={{ background: 'radial-gradient(circle, rgba(244,63,94,0.45), transparent 70%)' }}
+        className="absolute inset-7 rounded-full opacity-55 blur-3xl"
+        style={{
+          background: over
+            ? 'radial-gradient(circle, rgba(52,211,153,0.45), transparent 70%)'
+            : 'radial-gradient(circle, rgba(244,63,94,0.42), transparent 70%)',
+        }}
         aria-hidden="true"
       />
       <svg width={size} height={size} className="-rotate-90 relative" aria-hidden="true">
@@ -54,22 +58,28 @@ export default function CalorieRing({ consumed, target }) {
             <stop offset="55%" stopColor="#fb7185" />
             <stop offset="100%" stopColor="#f43f5e" />
           </linearGradient>
+          <linearGradient id="overGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#6ee7b7" />
+            <stop offset="100%" stopColor="#10b981" />
+          </linearGradient>
         </defs>
+        {/* track */}
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="rgba(255,255,255,0.07)"
+          stroke="rgba(255,255,255,0.06)"
           strokeWidth={stroke}
         />
+        {/* progress */}
         <circle
           className="ring-progress"
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="url(#fireGrad)"
+          stroke={`url(#${over ? 'overGrad' : 'fireGrad'})`}
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={circumference}
@@ -77,14 +87,20 @@ export default function CalorieRing({ consumed, target }) {
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <Flame className="mb-1 text-orange-400 pulse-glow" size={26} aria-hidden="true" />
-        <span className="text-[2.75rem] font-extrabold leading-none tabular-nums">
+        <Flame
+          className={`mb-1 pulse-glow ${over ? 'text-emerald-400' : 'text-orange-400'}`}
+          size={26}
+          aria-hidden="true"
+        />
+        <span className="text-[3rem] font-extrabold leading-none tabular-nums tracking-tight">
           {count.toLocaleString()}
         </span>
-        <span className="mt-1 text-sm text-slate-400">מתוך {target.toLocaleString()} קק"ל</span>
+        <span className="mt-1.5 text-sm text-slate-400">מתוך {target.toLocaleString()} קק"ל</span>
         <span
-          className={`mt-2 rounded-full px-3 py-1 text-xs font-bold ${
-            over ? 'bg-emerald-500/15 text-emerald-300' : 'bg-orange-500/15 text-orange-300'
+          className={`mt-2.5 rounded-full px-3.5 py-1.5 text-xs font-bold ring-1 ${
+            over
+              ? 'bg-emerald-500/15 text-emerald-300 ring-emerald-400/25'
+              : 'bg-orange-500/15 text-orange-300 ring-orange-400/25'
           }`}
         >
           {over ? `יעד הושג! ${pctLabel}% 🎯` : `נשארו ${Math.round(remaining).toLocaleString()}`}

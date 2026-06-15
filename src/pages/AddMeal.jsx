@@ -139,10 +139,10 @@ export default function AddMeal() {
             role="radio"
             aria-checked={mealType === key}
             onClick={() => setMealType(key)}
-            className={`press flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-2xl border p-2 text-[11px] font-medium transition-colors ${
+            className={`press flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-2xl border p-2 text-[11px] font-semibold transition-colors ${
               mealType === key
-                ? 'border-orange-400/60 bg-orange-500/15 text-orange-300'
-                : 'border-white/10 bg-white/5 text-slate-400'
+                ? 'border-orange-400/60 bg-gradient-to-br from-orange-500/20 to-rose-500/10 text-orange-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                : 'border-white/10 bg-white/5 text-slate-400 hover:bg-white/10'
             }`}
           >
             <Icon size={20} aria-hidden="true" />
@@ -198,13 +198,17 @@ export default function AddMeal() {
                   }}
                   className={`press w-full rounded-2xl border p-3.5 text-start transition-colors ${
                     selected?.id === f.id
-                      ? 'border-orange-400/60 bg-orange-500/15'
-                      : 'border-white/10 bg-white/5'
+                      ? 'border-orange-400/60 bg-orange-500/15 shadow-[0_8px_24px_-12px_rgba(244,63,94,0.6)]'
+                      : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/[0.07]'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-100">{f.name}</span>
-                    {selected?.id === f.id && <Check size={18} className="text-orange-400" />}
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-slate-100">{f.name}</span>
+                    {selected?.id === f.id && (
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white">
+                        <Check size={15} strokeWidth={3} />
+                      </span>
+                    )}
                   </div>
                   <p className="mt-0.5 text-xs text-slate-400 tabular-nums">
                     {f.calories_per_100} קק"ל · ח {f.protein_per_100} · פ {f.carbs_per_100} · ש {f.fat_per_100} (ל-100 {f.unit})
