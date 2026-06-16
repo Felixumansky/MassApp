@@ -92,17 +92,25 @@
 html {
   font-family: var(--font-sans);
   -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
 }
 
 body {
   background-color: var(--color-bg);
   color: #f1f5f9;
   min-height: 100dvh;
+  max-width: 100%;
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   font-feature-settings: 'cv11', 'ss01';
+}
+
+#root {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 /* confident, tight display headings (2026 type voice) */
@@ -418,6 +426,19 @@ h2 {
 .ring-progress {
   transition: stroke-dashoffset 1.1s var(--ease);
   filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.55));
+}
+
+/* Keep responsive SVG charts from widening or horizontally panning the page. */
+.chart-frame {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.chart-frame > .recharts-responsive-container {
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* water fill */

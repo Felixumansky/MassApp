@@ -141,8 +141,8 @@ export default function Progress() {
       </section>
 
       {/* גרפים - זה לצד זה בדסקטופ */}
-      <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
-      <section className="glass fade-up p-4" aria-label="גרף משקל">
+      <div className="min-w-0 space-y-4 lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0">
+      <section className="glass fade-up min-w-0 overflow-hidden p-4" aria-label="גרף משקל">
         <h2 className="mb-2 flex items-center gap-2 font-semibold text-slate-200">
           <TrendingUp size={18} className="text-emerald-400" aria-hidden="true" /> מסלול המשקל
         </h2>
@@ -151,7 +151,7 @@ export default function Progress() {
             הוסף לפחות שתי שקילות כדי לראות את הגרף 📊
           </p>
         ) : (
-          <div className="h-48 lg:h-72" dir="ltr">
+          <div className="chart-frame h-48 lg:h-72" dir="ltr">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={weights} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                 <defs>
@@ -188,9 +188,9 @@ export default function Progress() {
       </section>
 
       {/* גרף קלוריות שבועי */}
-      <section className="glass fade-up p-4" aria-label="גרף קלוריות שבועי">
+      <section className="glass fade-up min-w-0 overflow-hidden p-4" aria-label="גרף קלוריות שבועי">
         <h2 className="mb-2 font-semibold text-slate-200">🔥 קלוריות — 7 ימים אחרונים</h2>
-        <div className="h-44 lg:h-72" dir="ltr">
+        <div className="chart-frame h-44 lg:h-72" dir="ltr">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={history} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
               <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
@@ -209,11 +209,11 @@ export default function Progress() {
       </section>
 
       {/* גרף שתיית מים שבועי */}
-      <section className="glass fade-up p-4" aria-label="גרף שתיית מים שבועי">
+      <section className="glass fade-up min-w-0 overflow-hidden p-4" aria-label="גרף שתיית מים שבועי">
         <h2 className="mb-2 flex items-center gap-2 font-semibold text-slate-200">
           <Droplets size={18} className="text-sky-400" aria-hidden="true" /> מים — 7 ימים אחרונים
         </h2>
-        <div className="h-44 lg:h-72" dir="ltr">
+        <div className="chart-frame h-44 lg:h-72" dir="ltr">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={history} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
               <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
@@ -237,7 +237,7 @@ export default function Progress() {
       </section>
 
       {/* תדירות אימונים שבועית */}
-      <section className="glass fade-up p-4" aria-label="גרף תדירות אימונים שבועית">
+      <section className="glass fade-up min-w-0 overflow-hidden p-4" aria-label="גרף תדירות אימונים שבועית">
         <h2 className="mb-2 flex items-center gap-2 font-semibold text-slate-200">
           <Dumbbell size={18} className="text-emerald-400" aria-hidden="true" /> אימונים — לפי שבוע
         </h2>
@@ -246,7 +246,7 @@ export default function Progress() {
             סמן "התאמנתי" בצ'ק־אין היומי כדי לראות את התדירות 💪
           </p>
         ) : (
-          <div className="h-44 lg:h-72" dir="ltr">
+          <div className="chart-frame h-44 lg:h-72" dir="ltr">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={weeklyTraining} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
