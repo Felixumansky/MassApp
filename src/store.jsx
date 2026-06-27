@@ -87,13 +87,28 @@ export function reducer(state, action) {
         ...state,
         active: {
           id: uid(),
-          date: dayKey(),
+          date: action.date ?? dayKey(),
           name: action.routine?.name ?? 'אימון חופשי',
           startedAt: Date.now(),
+          retroactive: !!action.retroactive,
+          durationSec: action.retroactive ? Math.max(60, Math.round(Number(action.durationSec) || 3600)) : undefined,
           exercises: fromRoutine,
         },
       };
     }
+
+    case 'updateActiveMeta':
+      if (!state.active) return state;
+      return {
+        ...state,
+        active: {
+          ...state.active,
+          ...(action.date ? { date: action.date } : null),
+          ...(action.durationSec != null
+            ? { durationSec: Math.max(60, Math.round(Number(action.durationSec) || 60)) }
+            : null),
+        },
+      };
 
     case 'addExercise': {
       if (!state.active) return state;
@@ -219,7 +234,9 @@ export function reducer(state, action) {
 
     case 'finishWorkout': {
       if (!state.active) return state;
-      const durationSec = Math.round((Date.now() - state.active.startedAt) / 1000);
+      const durationSec = state.active.retroactive
+        ? Math.max(60, Math.round(Number(state.active.durationSec) || 60))
+        : Math.round((Date.now() - state.active.startedAt) / 1000);
       const finished = {
         id: state.active.id,
         date: state.active.date,
@@ -230,7 +247,11 @@ export function reducer(state, action) {
           .filter((e) => e.sets.length > 0),
       };
       if (finished.exercises.length === 0) return { ...state, active: null };
-      return { ...state, active: null, workouts: [finished, ...state.workouts] };
+      return {
+        ...state,
+        active: null,
+        workouts: [finished, ...state.workouts].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
+      };
     }
 
     case 'discardWorkout':

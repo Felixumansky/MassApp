@@ -50,6 +50,37 @@ describe('store reducer', () => {
     expect(next.workouts[0].exercises[0].sets).toEqual([{ id: 's-1', reps: '5', weight: '100', rpe: '8', done: true }]);
   });
 
+  it('saves retroactive workouts with manual date and duration', () => {
+    const started = reducer(seed(), {
+      type: 'startWorkout',
+      retroactive: true,
+      date: '2026-06-20',
+      durationSec: 45 * 60,
+    });
+    const withExercise = {
+      ...started,
+      active: {
+        ...started.active,
+        exercises: [
+          {
+            uid: 'ex-1',
+            exerciseId: 'bench-press',
+            name: 'לחיצת חזה במוט',
+            muscle: 'chest',
+            sets: [{ id: 's-1', reps: '8', weight: '80', rpe: '', done: true }],
+          },
+        ],
+      },
+    };
+
+    const next = reducer(withExercise, { type: 'finishWorkout' });
+
+    expect(next.workouts[0]).toMatchObject({
+      date: '2026-06-20',
+      durationSec: 2700,
+      name: 'אימון חופשי',
+    });
+  });
   it('resets app data to the starter seed', () => {
     const state = { ...seed(), workouts: [{ id: 'w-1' }], profile: { name: 'Dev', unit: 'lb', weeklyGoal: 5 } };
     const next = reducer(state, { type: 'resetAll' });

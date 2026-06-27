@@ -1,14 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Plus, Trash2, X, Flag, Timer, Dumbbell, Copy, Sparkles, StickyNote } from 'lucide-react';
+import { Check, Plus, Trash2, X, Flag, Timer, Dumbbell, Copy, Sparkles, StickyNote, CalendarDays } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { GlassCard, MuscleTag, EmptyState, WeightInput } from '../components/ui.jsx';
 import ExercisePicker from '../components/ExercisePicker.jsx';
 import RestTimer from '../components/RestTimer.jsx';
 import WorkoutComplete from '../components/WorkoutComplete.jsx';
-import { fmtDuration, workoutVolume, epley1rm, vibrate, unitLabel, fmtWeight } from '../lib/utils.js';
+import { fmtDuration, workoutVolume, epley1rm, vibrate, unitLabel, fmtWeight, dayKey } from '../lib/utils.js';
 import { useDialogFocus } from '../lib/useDialogFocus.js';
+
+function workoutDisplayDuration(active) {
+  if (!active) return 0;
+  if (active.retroactive) return Math.max(60, Math.round(Number(active.durationSec) || 60));
+  return Math.round((Date.now() - active.startedAt) / 1000);
+}
 
 export default function ActiveWorkout() {
   const { state, dispatch } = useStore();
@@ -38,8 +44,12 @@ export default function ActiveWorkout() {
 
   useEffect(() => {
     if (!active) return undefined;
-    const t = setInterval(() => setElapsed(Math.round((Date.now() - active.startedAt) / 1000)), 1000);
-    setElapsed(Math.round((Date.now() - active.startedAt) / 1000));
+    if (active.retroactive) {
+      setElapsed(workoutDisplayDuration(active));
+      return undefined;
+    }
+    const t = setInterval(() => setElapsed(workoutDisplayDuration(active)), 1000);
+    setElapsed(workoutDisplayDuration(active));
     return () => clearInterval(t);
   }, [active]);
 
@@ -113,7 +123,7 @@ export default function ActiveWorkout() {
 
     return {
       name: active.name,
-      durationSec: Math.round((Date.now() - active.startedAt) / 1000),
+      durationSec: workoutDisplayDuration(active),
       totalSets,
       totalVolume: Math.round(totalVolume),
       exerciseCount: exs.length,
@@ -160,6 +170,8 @@ export default function ActiveWorkout() {
           <Flag className="size-4" /> סיום
         </button>
       </div>
+
+      {active.retroactive && <RetroWorkoutMeta active={active} dispatch={dispatch} />}
 
       {active.exercises.length === 0 ? (
         <EmptyState icon={Plus} title="הוסף את התרגיל הראשון" hint="בחר תרגיל מהספרייה כדי להתחיל לתעד סטים." />
@@ -215,6 +227,44 @@ export default function ActiveWorkout() {
         onDiscard={() => { dispatch({ type: 'discardWorkout' }); navigate('/'); }}
       />
     </div>
+  );
+}
+
+function RetroWorkoutMeta({ active, dispatch }) {
+  const durationMin = Math.max(1, Math.round((Number(active.durationSec) || 60) / 60));
+
+  return (
+    <GlassCard className="mb-4 grid grid-cols-2 gap-3 p-3.5">
+      <label className="flex flex-col gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
+        תאריך
+        <span className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2.5">
+          <CalendarDays className="size-4 text-[var(--color-cyan)]" />
+          <input
+            type="date"
+            value={active.date}
+            max={dayKey()}
+            onChange={(e) => dispatch({ type: 'updateActiveMeta', date: e.target.value })}
+            className="tnum min-w-0 flex-1 bg-transparent text-sm font-bold text-[var(--color-card-foreground)] outline-none [color-scheme:dark]"
+            aria-label="תאריך אימון"
+          />
+        </span>
+      </label>
+      <label className="flex flex-col gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
+        משך בדקות
+        <span className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2.5">
+          <Timer className="size-4 text-[var(--color-volt)]" />
+          <input
+            type="number"
+            min="1"
+            inputMode="numeric"
+            value={durationMin}
+            onChange={(e) => dispatch({ type: 'updateActiveMeta', durationSec: Math.max(1, Number(e.target.value) || 1) * 60 })}
+            className="tnum min-w-0 flex-1 bg-transparent text-sm font-bold text-[var(--color-card-foreground)] outline-none"
+            aria-label="משך אימון בדקות"
+          />
+        </span>
+      </label>
+    </GlassCard>
   );
 }
 

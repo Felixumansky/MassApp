@@ -1,4 +1,5 @@
-const BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const RAW_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const BASE = RAW_BASE.endsWith('/api') ? RAW_BASE.slice(0, -4) : RAW_BASE;
 
 async function req(path, { method = 'GET', token, body } = {}) {
   let res;
