@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="volt" x1="96" y1="96" x2="416" y2="416" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e9ff5e"/>
+      <stop offset="0.55" stop-color="#c6f24e"/>
+      <stop offset="1" stop-color="#a3e635"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#07090a"/>
+  <rect x="0.5" y="0.5" width="511" height="511" rx="111.5" stroke="#ffffff" stroke-opacity="0.08"/>
+  <g stroke="url(#volt)" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- dumbbell bar -->
+    <line x1="176" y1="256" x2="336" y2="256"/>
+    <!-- left plates -->
+    <line x1="150" y1="206" x2="150" y2="306"/>
+    <line x1="110" y1="226" x2="110" y2="286"/>
+    <!-- right plates -->
+    <line x1="362" y1="206" x2="362" y2="306"/>
+    <line x1="402" y1="226" x2="402" y2="286"/>
+  </g>
+</svg>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="volt" x1="120" y1="160" x2="392" y2="352" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e9ff5e"/>
+      <stop offset="0.55" stop-color="#c6f24e"/>
+      <stop offset="1" stop-color="#a3e635"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="#07090a"/>
+  <g stroke="url(#volt)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <line x1="196" y1="256" x2="316" y2="256"/>
+    <line x1="174" y1="218" x2="174" y2="294"/>
+    <line x1="142" y1="234" x2="142" y2="278"/>
+    <line x1="338" y1="218" x2="338" y2="294"/>
+    <line x1="370" y1="234" x2="370" y2="278"/>
+  </g>
+</svg>
