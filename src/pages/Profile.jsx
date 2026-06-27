@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { User, Target, Trash2, Zap, Cloud, CloudOff, LogOut, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { biometricSupported } from '../lib/biometric.js';
+import { User, Target, Trash2, Zap, Cloud, CloudOff, LogOut, Loader2, CheckCircle2, AlertCircle, ChevronRight, Fingerprint } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { useCloud } from '../cloud.jsx';
 import { PageHeader, GlassCard } from '../components/ui.jsx';
@@ -7,18 +9,31 @@ import { vibrate } from '../lib/utils.js';
 
 export default function Profile() {
   const { state, dispatch } = useStore();
+  const navigate = useNavigate();
   const { profile, workouts } = state;
 
   function clearAll() {
     if (confirm('לאפס את כל הנתונים? פעולה זו אינה הפיכה.')) {
-      localStorage.removeItem('liftlog.v1');
+      localStorage.removeItem('liftlog.v2');
       location.reload();
     }
   }
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader subtitle="הגדרות" title="פרופיל" />
+      <PageHeader
+        subtitle="הגדרות"
+        title="פרופיל"
+        action={
+          <button
+            onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}
+            aria-label="חזור"
+            className="press glass flex size-11 shrink-0 items-center justify-center rounded-2xl lg:hidden"
+          >
+            <ChevronRight className="size-5" />
+          </button>
+        }
+      />
 
       <GlassCard className="flex items-center gap-4">
         <span className="btn-volt flex size-14 items-center justify-center rounded-3xl">
@@ -103,12 +118,28 @@ const STATUS = {
 };
 
 function CloudAccount() {
-  const { user, status, error, login, register, logout } = useCloud();
+  const { user, status, error, login, register, logout, bioOn, enableBiometric, disableBiometric } = useCloud();
   const [mode, setMode] = useState('login'); // login | register
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [formErr, setFormErr] = useState('');
+  const [bioSupported, setBioSupported] = useState(false);
+  const [bioErr, setBioErr] = useState('');
+
+  useEffect(() => {
+    biometricSupported().then(setBioSupported);
+  }, []);
+
+  async function toggleBio() {
+    setBioErr('');
+    try {
+      if (bioOn) disableBiometric();
+      else await enableBiometric();
+    } catch (err) {
+      setBioErr(err.message || 'הפעלת טביעת האצבע נכשלה');
+    }
+  }
 
   async function submit(e) {
     e.preventDefault();
@@ -145,6 +176,32 @@ function CloudAccount() {
             <LogOut className="size-3.5" /> התנתק
           </button>
         </div>
+
+        {bioSupported && (
+          <>
+            <div className="h-px bg-white/8" />
+            <div className="flex items-center justify-between gap-3">
+              <span className="flex items-center gap-2.5 text-sm font-semibold">
+                <Fingerprint className="size-4 text-[var(--color-muted-foreground)]" />
+                כניסה בטביעת אצבע
+              </span>
+              <button
+                onClick={toggleBio}
+                role="switch"
+                aria-checked={bioOn}
+                aria-label="כניסה בטביעת אצבע"
+                className="press relative h-6 w-11 shrink-0 rounded-full transition-colors"
+                style={{ background: bioOn ? 'var(--color-volt)' : 'rgba(255,255,255,0.12)' }}
+              >
+                <span
+                  className="absolute top-0.5 size-5 rounded-full bg-white transition-all"
+                  style={{ insetInlineStart: bioOn ? '1.5rem' : '0.125rem' }}
+                />
+              </button>
+            </div>
+            {bioErr && <p className="text-xs font-semibold text-rose-400">{bioErr}</p>}
+          </>
+        )}
       </GlassCard>
     );
   }

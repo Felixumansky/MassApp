@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flame, Dumbbell, Trophy, Play, ChevronLeft, Clock, Layers } from 'lucide-react';
+import { Flame, Dumbbell, Trophy, Play, ChevronLeft, Clock, Layers, User } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, MuscleTag } from '../components/ui.jsx';
 import { workoutVolume, workoutSetCount, fmtDuration, dayKey, formatDateHe, fmtWeight, unitLabel } from '../lib/utils.js';
@@ -52,7 +52,19 @@ export default function Dashboard() {
 
   return (
     <div>
-      <PageHeader subtitle={greeting()} title={profile.name ? profile.name : 'מוכן לאימון?'} />
+      <PageHeader
+        subtitle={profile.name ? `${greeting()}, ${profile.name}` : greeting()}
+        title="מוכן לאימון?"
+        action={
+          <button
+            onClick={() => navigate('/profile')}
+            aria-label="פרופיל"
+            className="press glass flex size-11 shrink-0 items-center justify-center rounded-2xl lg:hidden"
+          >
+            <User className="size-5 text-[var(--color-muted-foreground)]" />
+          </button>
+        }
+      />
 
       {active ? (
         <button onClick={() => navigate('/workout')} className="press fade-up mb-4 w-full text-start">
@@ -118,7 +130,7 @@ function Stat({ icon: Icon, color, value, label }) {
   );
 }
 
-function WorkoutRow({ w }) {
+function WorkoutRow({ w, unit }) {
   const muscles = [...new Set(w.exercises.map((e) => e.muscle))].slice(0, 3);
   return (
     <GlassCard className="flex flex-col gap-2.5">
@@ -138,7 +150,7 @@ function WorkoutRow({ w }) {
       </div>
       <div className="tnum flex gap-4 text-xs text-[var(--color-muted-foreground)]">
         <span>{workoutSetCount(w)} סטים</span>
-        <span>{workoutVolume(w).toLocaleString()} ק״ג נפח</span>
+        <span>{fmtWeight(workoutVolume(w), unit).toLocaleString()} {unitLabel(unit)} נפח</span>
       </div>
     </GlassCard>
   );

@@ -41,6 +41,7 @@ function AnimatedRoutes() {
 }
 
 export default function App() {
+  const { locked } = useCloud();
   return (
     <>
       <AuroraBackground />
@@ -51,6 +52,7 @@ export default function App() {
         </main>
       </div>
       <BottomNav />
+      {locked && <LockScreen />}
     </>
   );
 }

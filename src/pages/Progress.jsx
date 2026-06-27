@@ -5,12 +5,13 @@ import {
 import { Trophy, Dumbbell, Layers, Plus, Trash2 } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, EmptyState } from '../components/ui.jsx';
-import { workoutVolume, epley1rm, shortDateHe, dayKey, vibrate } from '../lib/utils.js';
+import { workoutVolume, epley1rm, shortDateHe, dayKey, vibrate, toUnit, fmtWeight, toKg, unitLabel } from '../lib/utils.js';
 import { muscleById } from '../lib/exercises.js';
 
 export default function Progress() {
   const { state, dispatch } = useStore();
-  const { workouts, bodyWeights } = state;
+  const { workouts, bodyWeights, profile } = state;
+  const unit = profile.unit || 'kg';
   const [volExId, setVolExId] = useState('all');
 
   // Exercises that actually appear in logged workouts, for the volume picker.
@@ -45,14 +46,14 @@ export default function Progress() {
       const vol = workouts
         .filter((w) => w.date >= startKey && w.date <= endKey)
         .reduce((s, w) => s + volOf(w), 0);
-      buckets.push({ label: shortDateHe(endKey), volume: vol });
+      buckets.push({ label: shortDateHe(endKey), volume: Math.round(toUnit(vol, unit)) });
     }
     return buckets;
-  }, [workouts, volExId]);
+  }, [workouts, volExId, unit]);
 
   const weights = useMemo(
-    () => bodyWeights.map((b) => ({ label: shortDateHe(b.date), weight: b.weight })),
-    [bodyWeights]
+    () => bodyWeights.map((b) => ({ label: shortDateHe(b.date), weight: fmtWeight(b.weight, unit) })),
+    [bodyWeights, unit]
   );
 
   const prs = useMemo(() => {
@@ -107,7 +108,7 @@ export default function Progress() {
             <Layers className="size-5" style={{ color: 'var(--color-cyan)' }} />
           </span>
           <div>
-            <p className="tnum text-2xl font-extrabold leading-none">{(totals.volume / 1000).toFixed(1)}<span className="text-sm">ט׳</span></p>
+            <p className="tnum text-2xl font-extrabold leading-none">{(toUnit(totals.volume, unit) / 1000).toFixed(1)}<span className="text-sm">{unit === 'lb' ? 'K' : 'ט׳'}</span></p>
             <p className="text-xs text-[var(--color-muted-foreground)]">נפח כולל</p>
           </div>
         </GlassCard>
@@ -119,8 +120,8 @@ export default function Progress() {
             <h2 className="mb-1 font-bold">נפח שבועי</h2>
             <p className="text-xs text-[var(--color-muted-foreground)]">
               {volExId === 'all'
-                ? 'ק״ג מורמים ב‑8 השבועות האחרונים'
-                : 'ק״ג מורמים בתרגיל הנבחר ב‑8 השבועות האחרונים'}
+                ? `${unitLabel(unit)} מורמים ב‑8 השבועות האחרונים`
+                : `${unitLabel(unit)} מורמים בתרגיל הנבחר ב‑8 השבועות האחרונים`}
             </p>
           </div>
           {volExercises.length > 0 && (
@@ -144,7 +145,7 @@ export default function Progress() {
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
               <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} width={42} />
-              <Tooltip cursor={{ fill: 'rgba(255,255,255,0.04)' }} content={<VolTip />} />
+              <Tooltip cursor={{ fill: 'rgba(255,255,255,0.04)' }} content={<VolTip unit={unit} />} />
               <Bar dataKey="volume" radius={[6, 6, 0, 0]} maxBarSize={26}>
                 {weekly.map((d, i) => (
                   <Cell key={i} fill={i === weekly.length - 1 ? 'var(--color-volt)' : 'rgba(198,242,78,0.32)'} />
@@ -161,7 +162,7 @@ export default function Progress() {
             <h2 className="font-bold">משקל גוף</h2>
             <p className="text-xs text-[var(--color-muted-foreground)]">מגמה לאורך זמן</p>
           </div>
-          <AddWeightButton onAdd={(weight, date) => dispatch({ type: 'addBodyWeight', weight, date })} />
+          <AddWeightButton unit={unit} onAdd={(weight, date) => dispatch({ type: 'addBodyWeight', weight, date })} />
         </div>
         {weights.length > 0 ? (
           <div className="chart-frame h-40">
@@ -176,7 +177,7 @@ export default function Progress() {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
                 <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis domain={['dataMin - 1', 'dataMax + 1']} tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} width={42} />
-                <Tooltip content={<WeightTip />} />
+                <Tooltip content={<WeightTip unit={unit} />} />
                 <Area type="monotone" dataKey="weight" stroke="var(--color-cyan)" strokeWidth={2.5} fill="url(#wg)" dot={{ r: 3, fill: 'var(--color-cyan)' }} />
               </AreaChart>
             </ResponsiveContainer>
@@ -186,7 +187,7 @@ export default function Progress() {
         )}
 
         {bodyWeights.length > 0 && (
-          <WeightHistory entries={bodyWeights} onDelete={(id) => dispatch({ type: 'deleteBodyWeight', id })} />
+          <WeightHistory entries={bodyWeights} unit={unit} onDelete={(id) => dispatch({ type: 'deleteBodyWeight', id })} />
         )}
       </GlassCard>
 
@@ -205,9 +206,9 @@ export default function Progress() {
                   <span className="size-2.5 rounded-full" style={{ background: m.color }} />
                   <div className="flex-1">
                     <p className="text-sm font-bold">{p.name}</p>
-                    <p className="tnum text-xs text-[var(--color-muted-foreground)]">{p.weight} ק״ג × {p.reps}</p>
+                    <p className="tnum text-xs text-[var(--color-muted-foreground)]">{fmtWeight(p.weight, unit)} {unitLabel(unit)} × {p.reps}</p>
                   </div>
-                  <span className="tnum text-lg font-extrabold" style={{ color: m.color }}>{p.e1}<span className="text-xs"> ק״ג</span></span>
+                  <span className="tnum text-lg font-extrabold" style={{ color: m.color }}>{fmtWeight(p.e1, unit)}<span className="text-xs"> {unitLabel(unit)}</span></span>
                 </GlassCard>
               </li>
             );
@@ -218,7 +219,7 @@ export default function Progress() {
   );
 }
 
-function AddWeightButton({ onAdd }) {
+function AddWeightButton({ onAdd, unit }) {
   const [open, setOpen] = useState(false);
   const [val, setVal] = useState('');
   const [date, setDate] = useState(dayKey());
@@ -233,7 +234,7 @@ function AddWeightButton({ onAdd }) {
   }
   return (
     <form
-      onSubmit={(e) => { e.preventDefault(); if (val) { vibrate(8); onAdd(val, date); } setVal(''); setOpen(false); }}
+      onSubmit={(e) => { e.preventDefault(); if (val) { vibrate(8); onAdd(toKg(val, unit), date); } setVal(''); setOpen(false); }}
       className="flex items-center gap-1.5"
     >
       <input
@@ -243,15 +244,15 @@ function AddWeightButton({ onAdd }) {
       />
       <input
         autoFocus type="number" inputMode="decimal" step="0.1" value={val} onChange={(e) => setVal(e.target.value)}
-        placeholder="ק״ג" className="tnum glass w-14 rounded-xl px-2 py-1.5 text-center text-sm font-bold outline-none"
-        aria-label="משקל בק״ג"
+        placeholder={unitLabel(unit)} className="tnum glass w-14 rounded-xl px-2 py-1.5 text-center text-sm font-bold outline-none"
+        aria-label={`משקל ב${unitLabel(unit)}`}
       />
       <button type="submit" className="btn-volt press rounded-xl px-2.5 py-1.5 text-xs font-bold">שמור</button>
     </form>
   );
 }
 
-function WeightHistory({ entries, onDelete }) {
+function WeightHistory({ entries, onDelete, unit }) {
   const [open, setOpen] = useState(false);
   const sorted = [...entries].sort((a, b) => (a.date < b.date ? 1 : -1));
   return (
@@ -264,7 +265,7 @@ function WeightHistory({ entries, onDelete }) {
           {sorted.map((b) => (
             <li key={b.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-3 py-2">
               <span className="text-sm text-[var(--color-muted-foreground)]">{shortDateHe(b.date)}</span>
-              <span className="tnum flex-1 text-end text-sm font-bold">{b.weight} ק״ג</span>
+              <span className="tnum flex-1 text-end text-sm font-bold">{fmtWeight(b.weight, unit)} {unitLabel(unit)}</span>
               <button onClick={() => { vibrate(8); onDelete(b.id); }} className="press text-[var(--color-muted-foreground)]" aria-label="מחק שקילה">
                 <Trash2 className="size-3.5" />
               </button>
@@ -276,19 +277,19 @@ function WeightHistory({ entries, onDelete }) {
   );
 }
 
-function VolTip({ active, payload }) {
+function VolTip({ active, payload, unit }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="glass glass-strong rounded-xl px-3 py-2 text-xs">
-      <p className="tnum font-bold">{payload[0].value.toLocaleString()} ק״ג</p>
+      <p className="tnum font-bold">{payload[0].value.toLocaleString()} {unitLabel(unit)}</p>
     </div>
   );
 }
-function WeightTip({ active, payload }) {
+function WeightTip({ active, payload, unit }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="glass glass-strong rounded-xl px-3 py-2 text-xs">
-      <p className="tnum font-bold">{payload[0].value} ק״ג</p>
+      <p className="tnum font-bold">{payload[0].value} {unitLabel(unit)}</p>
     </div>
   );
 }
