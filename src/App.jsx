@@ -5,6 +5,8 @@ import AuroraBackground from './components/AuroraBackground.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import PageTransition from './components/PageTransition.jsx';
+import LockScreen from './components/LockScreen.jsx';
+import { useCloud } from './cloud.jsx';
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const ActiveWorkout = lazy(() => import('./pages/ActiveWorkout.jsx'));
