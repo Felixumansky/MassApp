@@ -2,11 +2,13 @@ import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Clock, Layers, Dumbbell, ListChecks, Sparkles } from 'lucide-react';
 import { fmtDuration, fmtWeight, unitLabel } from '../lib/utils.js';
+import { useDialogFocus } from '../lib/useDialogFocus.js';
 
 const CONFETTI = ['#c6f24e', '#38bdf8', '#a78bfa', '#fbbf24', '#fb7185'];
 
 /** Celebratory post-workout summary. Mounts with confetti + glow. */
 export default function WorkoutComplete({ open, summary, unit = 'kg', onDone }) {
+  const dialogRef = useDialogFocus(open, onDone);
   const pieces = useMemo(
     () =>
       Array.from({ length: 26 }, (_, i) => ({
@@ -45,6 +47,7 @@ export default function WorkoutComplete({ open, summary, unit = 'kg', onDone }) 
 
           <div className="fixed inset-0 z-[62] flex items-center justify-center p-4">
           <motion.div
+            ref={dialogRef}
             initial={{ y: 40, opacity: 0, scale: 0.96 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: 40, opacity: 0, scale: 0.96 }}

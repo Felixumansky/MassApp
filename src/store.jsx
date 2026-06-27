@@ -40,7 +40,7 @@ function load() {
   return seed();
 }
 
-function reducer(state, action) {
+export function reducer(state, action) {
   switch (action.type) {
     case 'resetAll':
       return seed();
@@ -162,7 +162,7 @@ function reducer(state, action) {
         active: {
           ...state.active,
           exercises: state.active.exercises.map((e) =>
-            e.uid === action.uid
+            e.uid === action.uid && e.sets.some((s) => s.id === action.setId)
               ? {
                   ...e,
                   sets: [

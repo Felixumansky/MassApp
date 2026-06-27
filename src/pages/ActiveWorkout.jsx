@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Plus, Trash2, X, Flag, Timer, Dumbbell } from 'lucide-react';
+import { Check, Plus, Trash2, X, Flag, Timer, Dumbbell, Copy, Sparkles, StickyNote } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { GlassCard, MuscleTag, EmptyState, WeightInput } from '../components/ui.jsx';
 import ExercisePicker from '../components/ExercisePicker.jsx';
 import RestTimer from '../components/RestTimer.jsx';
 import WorkoutComplete from '../components/WorkoutComplete.jsx';
 import { fmtDuration, workoutVolume, epley1rm, vibrate, unitLabel, fmtWeight } from '../lib/utils.js';
+import { useDialogFocus } from '../lib/useDialogFocus.js';
 
 export default function ActiveWorkout() {
   const { state, dispatch } = useStore();
@@ -20,6 +21,20 @@ export default function ActiveWorkout() {
   const [rest, setRest] = useState({ open: false, seconds: 90 });
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [completed, setCompleted] = useState(null);
+
+  const bestByExercise = useMemo(() => {
+    const best = {};
+    for (const w of state.workouts) {
+      for (const ex of w.exercises || []) {
+        for (const s of ex.sets || []) {
+          if (!s.done || !s.weight || !s.reps) continue;
+          const e1 = epley1rm(s.weight, s.reps);
+          if (e1 > (best[ex.exerciseId] || 0)) best[ex.exerciseId] = e1;
+        }
+      }
+    }
+    return best;
+  }, [state.workouts]);
 
   useEffect(() => {
     if (!active) return undefined;
@@ -160,7 +175,7 @@ export default function ActiveWorkout() {
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ type: 'spring', stiffness: 320, damping: 30 }}
               >
-                <ExerciseCard ex={ex} unit={unit} onToggle={toggleSet} dispatch={dispatch} />
+                <ExerciseCard ex={ex} unit={unit} priorBest={bestByExercise[ex.exerciseId] || 0} onToggle={toggleSet} dispatch={dispatch} />
               </motion.li>
             ))}
           </AnimatePresence>
@@ -203,7 +218,7 @@ export default function ActiveWorkout() {
   );
 }
 
-function ExerciseCard({ ex, unit, onToggle, dispatch }) {
+function ExerciseCard({ ex, unit, priorBest, onToggle, dispatch }) {
   const doneCount = ex.sets.filter((s) => s.done).length;
   return (
     <GlassCard className="flex flex-col gap-3 p-3.5">
@@ -221,15 +236,16 @@ function ExerciseCard({ ex, unit, onToggle, dispatch }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-[2rem_1fr_1fr_2.5rem] items-center gap-2 text-[11px] font-semibold text-[var(--color-muted-foreground)]">
+      <div className="grid grid-cols-[1.7rem_1fr_1fr_0.8fr_2.2rem] items-center gap-1.5 text-[11px] font-semibold text-[var(--color-muted-foreground)]">
         <span className="text-center">סט</span>
         <span className="text-center">חזרות</span>
         <span className="text-center">משקל ({unitLabel(unit)})</span>
+        <span className="text-center">RPE</span>
         <span className="text-center">{doneCount}/{ex.sets.length}</span>
       </div>
 
       {ex.sets.map((s, i) => (
-        <div key={s.id} className="grid grid-cols-[2rem_1fr_1fr_2.5rem] items-center gap-2">
+        <div key={s.id} className="grid grid-cols-[1.7rem_1fr_1fr_0.8fr_2.2rem] items-center gap-1.5">
           <span className="tnum text-center text-sm font-bold text-[var(--color-muted-foreground)]">{i + 1}</span>
           <input
             type="number"
@@ -248,9 +264,21 @@ function ExerciseCard({ ex, unit, onToggle, dispatch }) {
             className="tnum rounded-xl bg-white/5 py-2.5 text-center text-base font-bold outline-none focus:bg-white/10"
             aria-label={`משקל סט ${i + 1}`}
           />
+          <input
+            type="number"
+            inputMode="decimal"
+            min="1"
+            max="10"
+            step="0.5"
+            value={s.rpe || ''}
+            onChange={(e) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { rpe: e.target.value } })}
+            placeholder="—"
+            className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-sm font-bold outline-none focus:bg-white/10"
+            aria-label={`RPE סט ${i + 1}`}
+          />
           <button
             onClick={() => onToggle(ex.uid, s)}
-            className="press flex size-9 items-center justify-center justify-self-center rounded-xl transition-colors"
+            className="press relative flex size-9 items-center justify-center justify-self-center rounded-xl transition-colors"
             style={{
               background: s.done ? 'var(--color-volt)' : 'rgba(255,255,255,0.06)',
               color: s.done ? '#0a1500' : '#94a3b8',
@@ -259,9 +287,23 @@ function ExerciseCard({ ex, unit, onToggle, dispatch }) {
             aria-pressed={s.done}
           >
             <Check className="size-4" strokeWidth={3} />
+            {s.done && epley1rm(s.weight, s.reps) > priorBest && (
+              <Sparkles className="absolute -end-1 -top-1 size-3.5 text-[var(--color-amber)]" />
+            )}
           </button>
         </div>
       ))}
+
+      <label className="flex items-start gap-2 rounded-xl bg-white/[0.035] px-3 py-2 text-xs text-[var(--color-muted-foreground)]">
+        <StickyNote className="mt-0.5 size-4 shrink-0" />
+        <textarea
+          value={ex.note || ''}
+          onChange={(e) => dispatch({ type: 'updateExerciseNote', uid: ex.uid, note: e.target.value })}
+          placeholder="הערה לתרגיל"
+          rows={1}
+          className="min-h-6 flex-1 resize-none bg-transparent text-sm font-semibold text-[var(--color-card-foreground)] outline-none placeholder:font-normal placeholder:text-[var(--color-muted-foreground)]"
+        />
+      </label>
 
       <div className="flex gap-2">
         <button
@@ -269,6 +311,12 @@ function ExerciseCard({ ex, unit, onToggle, dispatch }) {
           className="press flex-1 rounded-xl bg-white/5 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
         >
           + סט
+        </button>
+        <button
+          onClick={() => dispatch({ type: 'duplicateSet', uid: ex.uid, setId: ex.sets.at(-1).id })}
+          className="press flex items-center gap-1 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
+        >
+          <Copy className="size-3.5" /> שכפל
         </button>
         {ex.sets.length > 1 && (
           <button
@@ -285,6 +333,7 @@ function ExerciseCard({ ex, unit, onToggle, dispatch }) {
 
 function ConfirmSheet({ mode, onClose, onFinish, onDiscard }) {
   const isFinish = mode === 'finish';
+  const dialogRef = useDialogFocus(!!mode, onClose);
   return (
     <AnimatePresence>
       {mode && (
@@ -294,6 +343,7 @@ function ConfirmSheet({ mode, onClose, onFinish, onDiscard }) {
             onClick={onClose} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
           />
           <motion.div
+            ref={dialogRef}
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 340, damping: 32 }}
             className="solid shadow-[var(--shadow-overlay)] fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md rounded-t-2xl p-5 pb-[max(1.25rem,var(--safe-b))]"

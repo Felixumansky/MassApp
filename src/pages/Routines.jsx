@@ -7,6 +7,7 @@ import { PageHeader, GlassCard, MuscleTag, EmptyState } from '../components/ui.j
 import ExercisePicker from '../components/ExercisePicker.jsx';
 import { resolveExercise, routineExerciseId, routineExerciseTargets } from '../lib/exercises.js';
 import { uid, vibrate } from '../lib/utils.js';
+import { useDialogFocus } from '../lib/useDialogFocus.js';
 
 export default function Routines() {
   const { state, dispatch } = useStore();
@@ -98,6 +99,7 @@ function RoutineEditorInner({ draft, picker, setPicker, onClose, onSave }) {
   const { state } = useStore();
   const [name, setName] = useState(draft.name);
   const [exercises, setExercises] = useState(draft.exercises);
+  const dialogRef = useDialogFocus(true, onClose);
 
   function updateEntry(idx, patch) {
     setExercises((xs) =>
@@ -127,6 +129,7 @@ function RoutineEditorInner({ draft, picker, setPicker, onClose, onSave }) {
     <AnimatePresence>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" />
       <motion.div
+        ref={dialogRef}
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 320, damping: 34 }}
         className="solid shadow-[var(--shadow-overlay)] fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[88dvh] max-w-md flex-col rounded-t-2xl p-4 pb-[max(1rem,var(--safe-b))]"

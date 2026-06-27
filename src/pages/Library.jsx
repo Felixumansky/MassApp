@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Dumbbell, Plus, X, Trash2 } from 'lucide-react';
-import { EXERCISES, MUSCLES, muscleById } from '../lib/exercises.js';
+import { EXERCISES, MUSCLES } from '../lib/exercises.js';
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, EmptyState } from '../components/ui.jsx';
 import { vibrate } from '../lib/utils.js';
+import { useDialogFocus } from '../lib/useDialogFocus.js';
 
 export default function Library() {
   const { state, dispatch } = useStore();
@@ -112,6 +113,7 @@ export default function Library() {
 function CreateExercise({ open, onClose, onCreate }) {
   const [name, setName] = useState('');
   const [muscle, setMuscle] = useState(MUSCLES[0].id);
+  const dialogRef = useDialogFocus(open, onClose);
 
   function submit(e) {
     e.preventDefault();
@@ -131,6 +133,7 @@ function CreateExercise({ open, onClose, onCreate }) {
             onClick={onClose} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
           />
           <motion.form
+            ref={dialogRef}
             onSubmit={submit}
             initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 320, damping: 34 }}

@@ -4,12 +4,14 @@ import { Search, X } from 'lucide-react';
 import { EXERCISES, MUSCLES, muscleById } from '../lib/exercises.js';
 import { vibrate } from '../lib/utils.js';
 import { useStore } from '../store.jsx';
+import { useDialogFocus } from '../lib/useDialogFocus.js';
 
 /** Bottom-sheet exercise picker with search + muscle filter. */
 export default function ExercisePicker({ open, onClose, onPick, excludeIds = [] }) {
   const { state } = useStore();
   const [q, setQ] = useState('');
   const [muscle, setMuscle] = useState('all');
+  const dialogRef = useDialogFocus(open, onClose);
 
   const results = useMemo(() => {
     const needle = q.trim();
@@ -33,6 +35,7 @@ export default function ExercisePicker({ open, onClose, onPick, excludeIds = [] 
             className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
           />
           <motion.div
+            ref={dialogRef}
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}

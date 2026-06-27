@@ -173,7 +173,6 @@ export function CloudProvider({ children }) {
   // On first mount with a saved token, reconcile (unless waiting on unlock).
   useEffect(() => {
     if (!locked && auth?.token && !ready.current) reconcile(auth.token);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Debounced push whenever the synced slice changes.
@@ -205,7 +204,6 @@ export function CloudProvider({ children }) {
       clearTimeout(pushTimer.current);
       clearTimeout(retryTimer.current);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sliceKey, auth?.token]);
 
   const value = useMemo(
@@ -224,7 +222,6 @@ export function CloudProvider({ children }) {
       disableBiometric: turnOffBiometric,
       replaceCloudState,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [auth, status, error, locked, bioOn]
   );
 

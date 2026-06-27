@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Flame, Dumbbell, Trophy, Play, ChevronLeft, Clock, Layers, User } from 'lucide-react';
+import { Flame, Dumbbell, Play, ChevronLeft, Clock, Layers, User } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, MuscleTag } from '../components/ui.jsx';
 import { workoutVolume, workoutSetCount, fmtDuration, dayKey, formatDateHe, fmtWeight, unitLabel } from '../lib/utils.js';
