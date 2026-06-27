@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Dumbbell, Play, ChevronLeft, Clock, Layers, User, CalendarClock, X } from 'lucide-react';
+import { Flame, Dumbbell, Play, ChevronLeft, Layers, User, CalendarClock, X } from 'lucide-react';
 import { useStore } from '../store.jsx';
-import { PageHeader, GlassCard, MuscleTag } from '../components/ui.jsx';
-import { workoutVolume, workoutSetCount, fmtDuration, dayKey, formatDateHe, fmtWeight, unitLabel } from '../lib/utils.js';
+import { PageHeader, GlassCard } from '../components/ui.jsx';
+import WorkoutHistoryList from '../components/WorkoutHistory.jsx';
+import { workoutVolume, dayKey, fmtWeight, unitLabel } from '../lib/utils.js';
 import { useDialogFocus } from '../lib/useDialogFocus.js';
 
 function greeting() {
@@ -119,13 +120,7 @@ export default function Dashboard() {
           עדיין אין אימונים. לחץ על «התחל אימון» כדי להתחיל.
         </GlassCard>
       ) : (
-        <ul className="flex flex-col gap-3">
-          {recent.map((w, i) => (
-            <li key={w.id} className="fade-up" style={{ '--d': `${0.06 * i}s` }}>
-              <WorkoutRow w={w} unit={unit} />
-            </li>
-          ))}
-        </ul>
+        <WorkoutHistoryList workouts={recent} unit={unit} />
       )}
     </div>
   );
@@ -234,32 +229,6 @@ function Stat({ icon: Icon, color, value, label }) {
       <Icon className="size-5" style={{ color }} />
       <span className="tnum text-xl font-extrabold leading-none">{value}</span>
       <span className="text-[11px] font-medium text-[var(--color-muted-foreground)]">{label}</span>
-    </GlassCard>
-  );
-}
-
-function WorkoutRow({ w, unit }) {
-  const muscles = [...new Set(w.exercises.map((e) => e.muscle))].slice(0, 3);
-  return (
-    <GlassCard className="flex flex-col gap-2.5">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="font-bold">{w.name}</p>
-          <p className="text-xs text-[var(--color-muted-foreground)]">{formatDateHe(w.date)}</p>
-        </div>
-        <div className="tnum flex items-center gap-1 text-xs font-semibold text-[var(--color-muted-foreground)]">
-          <Clock className="size-3.5" /> {fmtDuration(w.durationSec)}
-        </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-1.5">
-        {muscles.map((m) => (
-          <MuscleTag key={m} muscle={m} />
-        ))}
-      </div>
-      <div className="tnum flex gap-4 text-xs text-[var(--color-muted-foreground)]">
-        <span>{workoutSetCount(w)} סטים</span>
-        <span>{fmtWeight(workoutVolume(w), unit).toLocaleString()} {unitLabel(unit)} נפח</span>
-      </div>
     </GlassCard>
   );
 }

@@ -2,6 +2,7 @@ import { lazy, Suspense, useMemo, useState } from 'react';
 import { Trophy, Dumbbell, Layers, Plus, Trash2 } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, EmptyState, AppLoader } from '../components/ui.jsx';
+import WorkoutHistoryList from '../components/WorkoutHistory.jsx';
 import { workoutVolume, epley1rm, shortDateHe, dayKey, vibrate, toUnit, fmtWeight, toKg, unitLabel } from '../lib/utils.js';
 import { muscleById } from '../lib/exercises.js';
 
@@ -112,6 +113,11 @@ export default function Progress() {
             <p className="text-xs text-[var(--color-muted-foreground)]">נפח כולל</p>
           </div>
         </GlassCard>
+      </section>
+
+      <section>
+        <h2 className="mb-2 font-bold">היסטוריית אימונים</h2>
+        <WorkoutHistoryList workouts={workouts} unit={unit} />
       </section>
 
       <GlassCard>
