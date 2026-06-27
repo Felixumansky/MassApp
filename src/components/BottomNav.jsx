@@ -1,78 +1,67 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, TrendingUp, User, Plus } from 'lucide-react';
+import { Home, Dumbbell, ClipboardList, TrendingUp, Plus } from 'lucide-react';
+import { useStore } from '../store.jsx';
+import { vibrate } from '../lib/utils.js';
 
 const items = [
-  { to: '/', label: 'היום', Icon: Home },
-  { to: '/progress', label: 'התקדמות', Icon: TrendingUp },
-  { to: '/profile', label: 'פרופיל', Icon: User },
+  { to: '/', label: 'בית', icon: Home },
+  { to: '/library', label: 'תרגילים', icon: Dumbbell },
+  { to: '/routines', label: 'תוכניות', icon: ClipboardList },
+  { to: '/progress', label: 'התקדמות', icon: TrendingUp },
 ];
 
 export default function BottomNav() {
+  const { state, dispatch } = useStore();
   const navigate = useNavigate();
+
+  function startOrResume() {
+    vibrate(8);
+    if (!state.active) dispatch({ type: 'startWorkout' });
+    navigate('/workout');
+  }
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-50 mx-auto max-w-md px-4 pb-[max(0.85rem,var(--safe-b))] lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-center justify-around border-t border-[var(--hairline)] bg-[var(--surface-solid)] px-2 pb-[max(0.5rem,var(--safe-b))] pt-2 lg:hidden"
       aria-label="ניווט ראשי"
     >
-      <div className="glass glass-strong relative flex items-stretch rounded-[1.9rem] px-2 py-2">
-        {/* right group (RTL: appears first) */}
-        <div className="flex flex-1 items-center justify-evenly">
-          {items.slice(0, 2).map(({ to, label, Icon }) => (
-            <NavItem key={to} to={to} label={label} Icon={Icon} />
-          ))}
-        </div>
+      {items.slice(0, 2).map((it) => (
+        <Tab key={it.to} {...it} />
+      ))}
 
-        {/* reserved slot keeps the floating button perfectly centered */}
-        <div className="w-16 shrink-0" aria-hidden="true" />
+      <button
+        onClick={startOrResume}
+        className="btn-volt press -mt-7 flex size-14 shrink-0 items-center justify-center rounded-full"
+        aria-label={state.active ? 'המשך אימון' : 'התחל אימון'}
+      >
+        <Plus className="size-7" strokeWidth={2.6} />
+        {state.active && (
+          <span className="absolute -end-0.5 -top-0.5 size-3.5 rounded-full bg-rose-500 ring-2 ring-[#07090a] pulse-glow" />
+        )}
+      </button>
 
-        {/* left group */}
-        <div className="flex flex-1 items-center justify-evenly">
-          {items.slice(2).map(({ to, label, Icon }) => (
-            <NavItem key={to} to={to} label={label} Icon={Icon} />
-          ))}
-        </div>
-
-        <button
-          onClick={() => navigate('/add')}
-          aria-label="הוספת ארוחה"
-          className="btn-fire press absolute -top-7 left-1/2 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-[1.55rem] text-white ring-4 ring-[#06070d]"
-        >
-          <Plus size={32} strokeWidth={2.5} />
-        </button>
-      </div>
+      {items.slice(2).map((it) => (
+        <Tab key={it.to} {...it} />
+      ))}
     </nav>
   );
 }
 
-function NavItem({ to, label, Icon }) {
+function Tab({ to, label, icon: Icon }) {
   return (
     <NavLink
       to={to}
-      end={to === '/'}
-      className={({ isActive }) =>
-        `press relative flex min-h-[52px] min-w-[64px] flex-col items-center justify-center gap-1 rounded-[1.25rem] px-3 py-1.5 text-[11px] font-semibold ${
-          isActive ? 'text-orange-300' : 'text-slate-400 hover:text-slate-200'
-        }`
-      }
+      onClick={() => vibrate(5)}
+      className="press flex w-16 flex-col items-center gap-0.5 py-1 text-[11px] font-medium"
     >
       {({ isActive }) => (
         <>
-          <span
-            className={`flex h-9 w-9 items-center justify-center rounded-2xl transition-all duration-300 ${
-              isActive
-                ? 'bg-gradient-to-br from-orange-500/25 to-rose-500/15 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]'
-                : ''
-            }`}
-          >
-            <Icon
-              size={21}
-              strokeWidth={isActive ? 2.4 : 2}
-              className={isActive ? 'drop-shadow-[0_0_8px_rgba(251,146,60,0.65)]' : ''}
-              aria-hidden="true"
-            />
-          </span>
-          <span>{label}</span>
+          <Icon
+            className="size-[22px] transition-colors"
+            style={{ color: isActive ? 'var(--color-volt)' : '#94a3b8' }}
+            strokeWidth={isActive ? 2.5 : 2}
+          />
+          <span style={{ color: isActive ? '#f1f5f9' : '#94a3b8' }}>{label}</span>
         </>
       )}
     </NavLink>

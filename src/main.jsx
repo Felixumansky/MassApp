@@ -1,16 +1,21 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
+import { StrictMode, Suspense } from 'react';
+import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import App from './App.jsx';
-import AppErrorBoundary from './components/AppErrorBoundary.jsx';
 import './index.css';
+import App from './App.jsx';
+import { StoreProvider } from './store.jsx';
+import { CloudProvider } from './cloud.jsx';
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <AppErrorBoundary>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <App />
-      </BrowserRouter>
-    </AppErrorBoundary>
-  </React.StrictMode>
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <BrowserRouter>
+      <StoreProvider>
+        <CloudProvider>
+          <Suspense fallback={null}>
+            <App />
+          </Suspense>
+        </CloudProvider>
+      </StoreProvider>
+    </BrowserRouter>
+  </StrictMode>
 );

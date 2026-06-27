@@ -1,49 +1,54 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
-import BottomNav from './components/BottomNav.jsx';
+import { Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
+import AuroraBackground from './components/AuroraBackground.jsx';
 import Sidebar from './components/Sidebar.jsx';
+import BottomNav from './components/BottomNav.jsx';
+import PageTransition from './components/PageTransition.jsx';
 
-const Home = lazy(() => import('./pages/Home.jsx'));
-const AddMeal = lazy(() => import('./pages/AddMeal.jsx'));
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
+const ActiveWorkout = lazy(() => import('./pages/ActiveWorkout.jsx'));
+const Library = lazy(() => import('./pages/Library.jsx'));
+const Routines = lazy(() => import('./pages/Routines.jsx'));
 const Progress = lazy(() => import('./pages/Progress.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
 
-function PageFallback() {
+const page = (El) => (
+  <PageTransition>
+    <Suspense fallback={null}>
+      <El />
+    </Suspense>
+  </PageTransition>
+);
+
+function AnimatedRoutes() {
+  const location = useLocation();
   return (
-    <div className="space-y-4" role="status" aria-label="טוען מסך">
-      <div className="skeleton glass h-24" />
-      <div className="skeleton glass h-64" />
-      <span className="sr-only">טוען...</span>
-    </div>
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={page(Dashboard)} />
+        <Route path="/workout" element={page(ActiveWorkout)} />
+        <Route path="/library" element={page(Library)} />
+        <Route path="/routines" element={page(Routines)} />
+        <Route path="/progress" element={page(Progress)} />
+        <Route path="/profile" element={page(Profile)} />
+        <Route path="*" element={page(Dashboard)} />
+      </Routes>
+    </AnimatePresence>
   );
 }
 
 export default function App() {
   return (
-    <div className="min-h-dvh">
-      <div className="bg-orbs">
-        <div className="orb orb-1" />
-        <div className="orb orb-2" />
-        <div className="orb orb-3" />
-      </div>
-      <div className="grain" aria-hidden="true" />
-
-      <Sidebar />
-
-      <div className="lg:ms-64">
-        <main className="mx-auto max-w-md px-4 pt-6 pb-32 lg:max-w-5xl lg:px-10 lg:pt-10 lg:pb-16">
-          <Suspense fallback={<PageFallback />}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/add" element={<AddMeal />} />
-              <Route path="/progress" element={<Progress />} />
-              <Route path="/profile" element={<Profile />} />
-            </Routes>
-          </Suspense>
+    <>
+      <AuroraBackground />
+      <div className="lg:flex">
+        <Sidebar />
+        <main className="mx-auto w-full max-w-md px-4 pb-28 pt-[max(1rem,var(--safe-t))] lg:max-w-3xl lg:px-8 lg:pb-12">
+          <AnimatedRoutes />
         </main>
       </div>
-
       <BottomNav />
-    </div>
+    </>
   );
 }
