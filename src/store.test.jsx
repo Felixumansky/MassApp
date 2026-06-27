@@ -81,6 +81,31 @@ describe('store reducer', () => {
       name: 'אימון חופשי',
     });
   });
+
+  it('updates a saved workout and keeps workouts sorted by date', () => {
+    const state = {
+      ...seed(),
+      workouts: [
+        { id: 'w-1', date: '2026-06-20', name: 'Old', durationSec: 1200, exercises: [] },
+        { id: 'w-2', date: '2026-06-25', name: 'Later', durationSec: 1800, exercises: [] },
+      ],
+    };
+
+    const next = reducer(state, {
+      type: 'updateWorkout',
+      id: 'w-1',
+      patch: { name: 'Updated', date: '2026-06-26', durationSec: 45 * 60 },
+    });
+
+    expect(next.workouts[0]).toMatchObject({
+      id: 'w-1',
+      name: 'Updated',
+      date: '2026-06-26',
+      durationSec: 2700,
+    });
+    expect(next.workouts.map((w) => w.id)).toEqual(['w-1', 'w-2']);
+  });
+
   it('resets app data to the starter seed', () => {
     const state = { ...seed(), workouts: [{ id: 'w-1' }], profile: { name: 'Dev', unit: 'lb', weeklyGoal: 5 } };
     const next = reducer(state, { type: 'resetAll' });

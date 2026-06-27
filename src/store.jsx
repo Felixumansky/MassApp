@@ -260,6 +260,24 @@ export function reducer(state, action) {
     case 'deleteWorkout':
       return { ...state, workouts: state.workouts.filter((w) => w.id !== action.id) };
 
+    case 'updateWorkout': {
+      const next = state.workouts
+        .map((w) =>
+          w.id === action.id
+            ? {
+                ...w,
+                ...action.patch,
+                durationSec:
+                  action.patch.durationSec != null
+                    ? Math.max(60, Math.round(Number(action.patch.durationSec) || 60))
+                    : w.durationSec,
+              }
+            : w
+        )
+        .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+      return { ...state, workouts: next };
+    }
+
     case 'saveRoutine': {
       const exists = state.routines.some((r) => r.id === action.routine.id);
       return {
