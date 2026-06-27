@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Flame, Dumbbell, Trophy, Play, ChevronLeft, Clock, Layers } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, MuscleTag } from '../components/ui.jsx';
-import { workoutVolume, workoutSetCount, fmtDuration, dayKey, formatDateHe } from '../lib/utils.js';
+import { workoutVolume, workoutSetCount, fmtDuration, dayKey, formatDateHe, fmtWeight, unitLabel } from '../lib/utils.js';
 
 function greeting() {
   const h = new Date().getHours();
@@ -31,6 +31,7 @@ export default function Dashboard() {
   const { state, dispatch } = useStore();
   const navigate = useNavigate();
   const { workouts, profile, active } = state;
+  const unit = profile.unit || 'kg';
 
   const stats = useMemo(() => {
     const weekAgo = dayKey(new Date(Date.now() - 6 * 864e5));
@@ -79,7 +80,7 @@ export default function Dashboard() {
 
       <section className="mb-5 grid grid-cols-3 gap-3" style={{ '--d': '0.05s' }}>
         <Stat icon={Dumbbell} color="var(--color-volt)" value={`${stats.weekCount}/${profile.weeklyGoal}`} label="השבוע" />
-        <Stat icon={Layers} color="var(--color-cyan)" value={stats.weekVolume.toLocaleString()} label="ק״ג נפח" />
+        <Stat icon={Layers} color="var(--color-cyan)" value={fmtWeight(stats.weekVolume, unit).toLocaleString()} label={`${unitLabel(unit)} נפח`} />
         <Stat icon={Flame} color="var(--color-amber)" value={stats.streak} label="רצף ימים" />
       </section>
 
@@ -98,7 +99,7 @@ export default function Dashboard() {
         <ul className="flex flex-col gap-3">
           {recent.map((w, i) => (
             <li key={w.id} className="fade-up" style={{ '--d': `${0.06 * i}s` }}>
-              <WorkoutRow w={w} />
+              <WorkoutRow w={w} unit={unit} />
             </li>
           ))}
         </ul>

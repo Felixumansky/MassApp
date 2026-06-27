@@ -2,35 +2,18 @@ import { createContext, useContext, useEffect, useMemo, useReducer } from 'react
 import { uid, dayKey } from './lib/utils.js';
 import { exerciseById } from './lib/exercises.js';
 
-const KEY = 'liftlog.v1';
+const KEY = 'liftlog.v2';
+
+/** Resolve an exercise id from the built-in library OR the user's custom ones. */
+function findEx(state, id) {
+  return (state.customExercises || []).find((e) => e.id === id) || exerciseById(id);
+}
 
 const STARTER = {
   id: 'r-ppl-push',
   name: 'Push — דחיפה',
   exercises: ['bench-press', 'ohp', 'incline-db-press', 'lateral-raise', 'triceps-pushdown'],
 };
-
-/** Build a fake past workout `daysAgo` days back for a nice first-run chart. */
-function demoWorkout(daysAgo, name, plan) {
-  const d = new Date();
-  d.setDate(d.getDate() - daysAgo);
-  return {
-    id: uid(),
-    date: dayKey(d),
-    name,
-    durationSec: 2400 + Math.round(Math.random() * 1200),
-    exercises: plan.map(([id, sets]) => {
-      const ex = exerciseById(id);
-      return {
-        uid: uid(),
-        exerciseId: id,
-        name: ex?.name ?? id,
-        muscle: ex?.muscle ?? 'chest',
-        sets: sets.map(([reps, weight]) => ({ id: uid(), reps, weight, done: true })),
-      };
-    }),
-  };
-}
 
 function seed() {
   return {
@@ -40,28 +23,9 @@ function seed() {
       { id: 'r-ppl-pull', name: 'Pull — משיכה', exercises: ['deadlift', 'pullup', 'seated-row', 'barbell-curl', 'face-pull'] },
       { id: 'r-legs', name: 'Legs — רגליים', exercises: ['squat', 'rdl', 'leg-press', 'leg-curl', 'calf-raise'] },
     ],
-    workouts: [
-      demoWorkout(2, 'Push — דחיפה', [
-        ['bench-press', [[10, 60], [8, 70], [6, 80]]],
-        ['ohp', [[10, 35], [9, 37.5], [8, 40]]],
-        ['triceps-pushdown', [[12, 25], [12, 27.5]]],
-      ]),
-      demoWorkout(5, 'Pull — משיכה', [
-        ['deadlift', [[5, 100], [5, 110], [3, 120]]],
-        ['pullup', [[8, 0], [7, 0], [6, 0]]],
-        ['barbell-curl', [[12, 25], [10, 27.5]]],
-      ]),
-      demoWorkout(7, 'Push — דחיפה', [
-        ['bench-press', [[10, 57.5], [8, 67.5], [6, 75]]],
-        ['ohp', [[10, 32.5], [9, 35]]],
-      ]),
-    ],
-    bodyWeights: [
-      { id: uid(), date: dayKey(new Date(Date.now() - 21 * 864e5)), weight: 78 },
-      { id: uid(), date: dayKey(new Date(Date.now() - 14 * 864e5)), weight: 78.6 },
-      { id: uid(), date: dayKey(new Date(Date.now() - 7 * 864e5)), weight: 79.2 },
-      { id: uid(), date: dayKey(), weight: 79.8 },
-    ],
+    workouts: [],
+    bodyWeights: [],
+    customExercises: [],
     active: null,
   };
 }
@@ -89,12 +53,13 @@ function reducer(state, action) {
         workouts: action.data.workouts || [],
         routines: action.data.routines || [],
         bodyWeights: action.data.bodyWeights || [],
+        customExercises: action.data.customExercises || [],
       };
 
     case 'startWorkout': {
       const fromRoutine = action.routine
         ? action.routine.exercises.map((id) => {
-            const ex = exerciseById(id);
+            const ex = findEx(state, id);
             return {
               uid: uid(),
               exerciseId: id,
@@ -118,7 +83,7 @@ function reducer(state, action) {
 
     case 'addExercise': {
       if (!state.active) return state;
-      const ex = exerciseById(action.exerciseId);
+      const ex = findEx(state, action.exerciseId);
       return {
         ...state,
         active: {
@@ -228,6 +193,21 @@ function reducer(state, action) {
         ),
       };
     }
+
+    case 'deleteBodyWeight':
+      return { ...state, bodyWeights: state.bodyWeights.filter((b) => b.id !== action.id) };
+
+    case 'addCustomExercise': {
+      const id = 'cx-' + uid();
+      const ex = { id, name: action.name.trim(), muscle: action.muscle, custom: true };
+      return { ...state, customExercises: [...(state.customExercises || []), ex] };
+    }
+
+    case 'deleteCustomExercise':
+      return {
+        ...state,
+        customExercises: (state.customExercises || []).filter((e) => e.id !== action.id),
+      };
 
     default:
       return state;

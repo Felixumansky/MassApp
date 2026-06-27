@@ -3,20 +3,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X } from 'lucide-react';
 import { EXERCISES, MUSCLES, muscleById } from '../lib/exercises.js';
 import { vibrate } from '../lib/utils.js';
+import { useStore } from '../store.jsx';
 
 /** Bottom-sheet exercise picker with search + muscle filter. */
 export default function ExercisePicker({ open, onClose, onPick, excludeIds = [] }) {
+  const { state } = useStore();
   const [q, setQ] = useState('');
   const [muscle, setMuscle] = useState('all');
 
   const results = useMemo(() => {
     const needle = q.trim();
-    return EXERCISES.filter((e) => {
+    const all = [...EXERCISES, ...(state.customExercises || [])];
+    return all.filter((e) => {
       if (muscle !== 'all' && e.muscle !== muscle) return false;
       if (needle && !e.name.includes(needle)) return false;
       return true;
     });
-  }, [q, muscle]);
+  }, [q, muscle, state.customExercises]);
 
   return (
     <AnimatePresence>

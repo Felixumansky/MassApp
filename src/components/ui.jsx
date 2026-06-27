@@ -1,5 +1,30 @@
-import { cn } from '../lib/utils.js';
+import { useState } from 'react';
+import { cn, fmtWeight, toKg } from '../lib/utils.js';
 import { muscleById } from '../lib/exercises.js';
+
+/**
+ * Weight input that displays/accepts values in the user's chosen unit while
+ * committing kg (canonical) to the store. Keeps a local draft string while
+ * focused so decimals/partial input ("60.") aren't mangled by conversion.
+ */
+export function WeightInput({ kg, unit, onCommit, className, ...rest }) {
+  const [draft, setDraft] = useState(null); // null = not editing
+  const stored = kg === '' || kg == null ? '' : String(fmtWeight(kg, unit));
+  const value = draft ?? stored;
+  return (
+    <input
+      type="number"
+      inputMode="decimal"
+      step="0.5"
+      value={value}
+      onFocus={() => setDraft(stored)}
+      onChange={(e) => { setDraft(e.target.value); onCommit(toKg(e.target.value, unit)); }}
+      onBlur={() => setDraft(null)}
+      className={className}
+      {...rest}
+    />
+  );
+}
 
 export function PageHeader({ title, subtitle, action }) {
   return (

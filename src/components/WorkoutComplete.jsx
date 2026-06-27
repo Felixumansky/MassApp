@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Clock, Layers, Dumbbell, ListChecks, Sparkles } from 'lucide-react';
-import { fmtDuration } from '../lib/utils.js';
+import { fmtDuration, fmtWeight, unitLabel } from '../lib/utils.js';
 
 const CONFETTI = ['#c6f24e', '#38bdf8', '#a78bfa', '#fbbf24', '#fb7185'];
 
 /** Celebratory post-workout summary. Mounts with confetti + glow. */
-export default function WorkoutComplete({ open, summary, onDone }) {
+export default function WorkoutComplete({ open, summary, unit = 'kg', onDone }) {
   const pieces = useMemo(
     () =>
       Array.from({ length: 26 }, (_, i) => ({
@@ -67,7 +67,7 @@ export default function WorkoutComplete({ open, summary, onDone }) {
             <div className="mt-5 grid grid-cols-2 gap-3">
               <Stat icon={Clock} color="var(--color-volt)" value={fmtDuration(summary.durationSec)} label="משך" />
               <Stat icon={ListChecks} color="var(--color-cyan)" value={summary.totalSets} label="סטים" />
-              <Stat icon={Layers} color="var(--color-violet)" value={summary.totalVolume.toLocaleString()} label="ק״ג נפח" />
+              <Stat icon={Layers} color="var(--color-violet)" value={fmtWeight(summary.totalVolume, unit).toLocaleString()} label={`${unitLabel(unit)} נפח`} />
               <Stat icon={Dumbbell} color="var(--color-amber)" value={summary.exerciseCount} label="תרגילים" />
             </div>
 
@@ -78,7 +78,7 @@ export default function WorkoutComplete({ open, summary, onDone }) {
                 </p>
                 {summary.personalRecords.slice(0, 3).map((pr) => (
                   <p key={pr.name} className="tnum text-sm font-semibold">
-                    {pr.name} · {pr.weight} ק״ג × {pr.reps}
+                    {pr.name} · {fmtWeight(pr.weight, unit)} {unitLabel(unit)} × {pr.reps}
                   </p>
                 ))}
               </div>

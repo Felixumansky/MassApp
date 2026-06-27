@@ -3,16 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Plus, Trash2, X, Flag, Timer, Dumbbell } from 'lucide-react';
 import { useStore } from '../store.jsx';
-import { GlassCard, MuscleTag, EmptyState } from '../components/ui.jsx';
+import { GlassCard, MuscleTag, EmptyState, WeightInput } from '../components/ui.jsx';
 import ExercisePicker from '../components/ExercisePicker.jsx';
 import RestTimer from '../components/RestTimer.jsx';
 import WorkoutComplete from '../components/WorkoutComplete.jsx';
-import { fmtDuration, workoutVolume, epley1rm, vibrate } from '../lib/utils.js';
+import { fmtDuration, workoutVolume, epley1rm, vibrate, unitLabel, fmtWeight } from '../lib/utils.js';
 
 export default function ActiveWorkout() {
   const { state, dispatch } = useStore();
   const navigate = useNavigate();
   const active = state.active;
+  const unit = state.profile.unit || 'kg';
 
   const [picker, setPicker] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -32,6 +33,7 @@ export default function ActiveWorkout() {
       <WorkoutComplete
         open
         summary={completed}
+        unit={unit}
         onDone={() => { setCompleted(null); navigate('/'); }}
       />
     );
@@ -158,7 +160,7 @@ export default function ActiveWorkout() {
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ type: 'spring', stiffness: 320, damping: 30 }}
               >
-                <ExerciseCard ex={ex} onToggle={toggleSet} dispatch={dispatch} />
+                <ExerciseCard ex={ex} unit={unit} onToggle={toggleSet} dispatch={dispatch} />
               </motion.li>
             ))}
           </AnimatePresence>
@@ -174,7 +176,7 @@ export default function ActiveWorkout() {
 
       {active.exercises.length > 0 && (
         <p className="tnum mt-3 text-center text-xs text-[var(--color-muted-foreground)]">
-          נפח נוכחי: {totalVolume.toLocaleString()} ק״ג
+          נפח נוכחי: {fmtWeight(totalVolume, unit).toLocaleString()} {unitLabel(unit)}
         </p>
       )}
 
@@ -201,7 +203,7 @@ export default function ActiveWorkout() {
   );
 }
 
-function ExerciseCard({ ex, onToggle, dispatch }) {
+function ExerciseCard({ ex, unit, onToggle, dispatch }) {
   const doneCount = ex.sets.filter((s) => s.done).length;
   return (
     <GlassCard className="flex flex-col gap-3 p-3.5">
@@ -222,7 +224,7 @@ function ExerciseCard({ ex, onToggle, dispatch }) {
       <div className="grid grid-cols-[2rem_1fr_1fr_2.5rem] items-center gap-2 text-[11px] font-semibold text-[var(--color-muted-foreground)]">
         <span className="text-center">סט</span>
         <span className="text-center">חזרות</span>
-        <span className="text-center">משקל (ק״ג)</span>
+        <span className="text-center">משקל ({unitLabel(unit)})</span>
         <span className="text-center">{doneCount}/{ex.sets.length}</span>
       </div>
 
@@ -238,11 +240,10 @@ function ExerciseCard({ ex, onToggle, dispatch }) {
             className="tnum rounded-xl bg-white/5 py-2.5 text-center text-base font-bold outline-none focus:bg-white/10"
             aria-label={`חזרות סט ${i + 1}`}
           />
-          <input
-            type="number"
-            inputMode="decimal"
-            value={s.weight}
-            onChange={(e) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { weight: e.target.value } })}
+          <WeightInput
+            kg={s.weight}
+            unit={unit}
+            onCommit={(kg) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { weight: kg } })}
             placeholder="—"
             className="tnum rounded-xl bg-white/5 py-2.5 text-center text-base font-bold outline-none focus:bg-white/10"
             aria-label={`משקל סט ${i + 1}`}

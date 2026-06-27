@@ -31,6 +31,40 @@ export function shortDateHe(key) {
   return `${d.getDate()}/${d.getMonth() + 1}`;
 }
 
+/* ── Weight units ──────────────────────────────────────────────────────
+   Everything is STORED in kg (canonical). These helpers convert to/from the
+   user's chosen display unit ('kg' | 'lb') so weights can be shown and
+   entered in either unit. */
+export const LB_PER_KG = 2.2046226218;
+
+/** Short label for a unit, e.g. for "משקל (ק״ג)". */
+export function unitLabel(unit) {
+  return unit === 'lb' ? 'lb' : 'ק״ג';
+}
+
+/** kg → display unit (Number). Passes through empty/blank values untouched. */
+export function toUnit(kg, unit) {
+  if (kg === '' || kg == null) return kg;
+  const n = Number(kg);
+  if (Number.isNaN(n)) return '';
+  return unit === 'lb' ? n * LB_PER_KG : n;
+}
+
+/** User input (in display unit) → kg for storage. Passes through blanks. */
+export function toKg(value, unit) {
+  if (value === '' || value == null) return value;
+  const n = Number(value);
+  if (Number.isNaN(n)) return '';
+  return unit === 'lb' ? n / LB_PER_KG : n;
+}
+
+/** kg → display unit, rounded to 1 decimal for showing to the user. */
+export function fmtWeight(kg, unit) {
+  const n = toUnit(kg, unit);
+  if (n === '' || n == null || Number.isNaN(Number(n))) return n;
+  return Math.round(Number(n) * 10) / 10;
+}
+
 /** Total volume (kg) of a workout = Σ reps × weight over completed sets. */
 export function workoutVolume(workout) {
   let v = 0;
