@@ -8,6 +8,7 @@ import PageTransition from './components/PageTransition.jsx';
 import LockScreen from './components/LockScreen.jsx';
 import { AppLoader } from './components/ui.jsx';
 import { useCloud } from './cloud.jsx';
+import { useGymAutoStart } from './lib/useGymAutoStart.jsx';
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const ActiveWorkout = lazy(() => import('./pages/ActiveWorkout.jsx'));
@@ -43,6 +44,8 @@ function AnimatedRoutes() {
 
 export default function App() {
   const { locked } = useCloud();
+  useGymAutoStart({ disabled: locked });
+
   return (
     <>
       <AuroraBackground />
