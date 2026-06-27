@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
 import { uid, dayKey } from './lib/utils.js';
-import { exerciseById } from './lib/exercises.js';
+import { resolveExercise, routineExerciseId, routineExerciseTargets } from './lib/exercises.js';
 
-const KEY = 'liftlog.v2';
+export const STORAGE_KEY = 'liftlog.v2';
 
 /** Resolve an exercise id from the built-in library OR the user's custom ones. */
 function findEx(state, id) {
-  return (state.customExercises || []).find((e) => e.id === id) || exerciseById(id);
+  return resolveExercise(id, state.customExercises);
 }
 
 const STARTER = {
@@ -15,7 +15,7 @@ const STARTER = {
   exercises: ['bench-press', 'ohp', 'incline-db-press', 'lateral-raise', 'triceps-pushdown'],
 };
 
-function seed() {
+export function seed() {
   return {
     profile: { name: '', unit: 'kg', weeklyGoal: 4 },
     routines: [
@@ -32,7 +32,7 @@ function seed() {
 
 function load() {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return { ...seed(), ...JSON.parse(raw) };
   } catch {
     /* ignore */
@@ -42,6 +42,9 @@ function load() {
 
 function reducer(state, action) {
   switch (action.type) {
+    case 'resetAll':
+      return seed();
+
     case 'profile':
       return { ...state, profile: { ...state.profile, ...action.patch } };
 
@@ -58,14 +61,25 @@ function reducer(state, action) {
 
     case 'startWorkout': {
       const fromRoutine = action.routine
-        ? action.routine.exercises.map((id) => {
+        ? action.routine.exercises.map((entry) => {
+            const id = routineExerciseId(entry);
+            const targets = routineExerciseTargets(entry);
             const ex = findEx(state, id);
             return {
               uid: uid(),
               exerciseId: id,
               name: ex?.name ?? id,
               muscle: ex?.muscle ?? 'chest',
-              sets: [{ id: uid(), reps: '', weight: '', done: false }],
+              targetSets: targets.targetSets,
+              targetReps: targets.targetReps,
+              note: '',
+              sets: Array.from({ length: targets.targetSets }, () => ({
+                id: uid(),
+                reps: targets.targetReps,
+                weight: '',
+                rpe: '',
+                done: false,
+              })),
             };
           })
         : [];
@@ -95,7 +109,10 @@ function reducer(state, action) {
               exerciseId: action.exerciseId,
               name: ex?.name ?? action.exerciseId,
               muscle: ex?.muscle ?? 'chest',
-              sets: [{ id: uid(), reps: '', weight: '', done: false }],
+              targetSets: 1,
+              targetReps: '',
+              note: '',
+              sets: [{ id: uid(), reps: '', weight: '', rpe: '', done: false }],
             },
           ],
         },
@@ -103,6 +120,7 @@ function reducer(state, action) {
     }
 
     case 'removeExercise':
+      if (!state.active) return state;
       return {
         ...state,
         active: {
@@ -112,19 +130,57 @@ function reducer(state, action) {
       };
 
     case 'addSet':
+      if (!state.active) return state;
       return {
         ...state,
         active: {
           ...state.active,
           exercises: state.active.exercises.map((e) =>
             e.uid === action.uid
-              ? { ...e, sets: [...e.sets, { id: uid(), reps: '', weight: e.sets.at(-1)?.weight ?? '', done: false }] }
+              ? {
+                  ...e,
+                  sets: [
+                    ...e.sets,
+                    {
+                      id: uid(),
+                      reps: e.targetReps || '',
+                      weight: e.sets.at(-1)?.weight ?? '',
+                      rpe: '',
+                      done: false,
+                    },
+                  ],
+                }
+              : e
+          ),
+        },
+      };
+
+    case 'duplicateSet':
+      if (!state.active) return state;
+      return {
+        ...state,
+        active: {
+          ...state.active,
+          exercises: state.active.exercises.map((e) =>
+            e.uid === action.uid
+              ? {
+                  ...e,
+                  sets: [
+                    ...e.sets,
+                    {
+                      ...e.sets.find((s) => s.id === action.setId),
+                      id: uid(),
+                      done: false,
+                    },
+                  ],
+                }
               : e
           ),
         },
       };
 
     case 'updateSet':
+      if (!state.active) return state;
       return {
         ...state,
         active: {
@@ -138,12 +194,25 @@ function reducer(state, action) {
       };
 
     case 'removeSet':
+      if (!state.active) return state;
       return {
         ...state,
         active: {
           ...state.active,
           exercises: state.active.exercises.map((e) =>
             e.uid === action.uid ? { ...e, sets: e.sets.filter((s) => s.id !== action.setId) } : e
+          ),
+        },
+      };
+
+    case 'updateExerciseNote':
+      if (!state.active) return state;
+      return {
+        ...state,
+        active: {
+          ...state.active,
+          exercises: state.active.exercises.map((e) =>
+            e.uid === action.uid ? { ...e, note: action.note } : e
           ),
         },
       };
@@ -221,7 +290,7 @@ export function StoreProvider({ children }) {
 
   useEffect(() => {
     try {
-      localStorage.setItem(KEY, JSON.stringify(state));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     } catch {
       /* quota / private mode */
     }

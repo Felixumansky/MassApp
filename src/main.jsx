@@ -5,17 +5,21 @@ import './index.css';
 import App from './App.jsx';
 import { StoreProvider } from './store.jsx';
 import { CloudProvider } from './cloud.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
+import { AppLoader } from './components/ui.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter>
-      <StoreProvider>
-        <CloudProvider>
-          <Suspense fallback={null}>
-            <App />
-          </Suspense>
-        </CloudProvider>
-      </StoreProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <StoreProvider>
+          <CloudProvider>
+            <Suspense fallback={<AppLoader />}>
+              <App />
+            </Suspense>
+          </CloudProvider>
+        </StoreProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   </StrictMode>
 );

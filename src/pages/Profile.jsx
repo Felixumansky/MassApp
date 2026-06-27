@@ -1,23 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { biometricSupported } from '../lib/biometric.js';
-import { User, Target, Trash2, Zap, Cloud, CloudOff, LogOut, Loader2, CheckCircle2, AlertCircle, ChevronRight, Fingerprint } from 'lucide-react';
-import { useStore } from '../store.jsx';
+import { User, Target, Trash2, Zap, Cloud, CloudOff, LogOut, Loader2, CheckCircle2, AlertCircle, ChevronRight, Fingerprint, Download, Upload } from 'lucide-react';
+import { seed, useStore } from '../store.jsx';
 import { useCloud } from '../cloud.jsx';
 import { PageHeader, GlassCard } from '../components/ui.jsx';
 import { vibrate } from '../lib/utils.js';
+
+function syncedSlice(data) {
+  return {
+    profile: data.profile || seed().profile,
+    workouts: data.workouts || [],
+    routines: data.routines || [],
+    bodyWeights: data.bodyWeights || [],
+    customExercises: data.customExercises || [],
+  };
+}
 
 export default function Profile() {
   const { state, dispatch } = useStore();
   const navigate = useNavigate();
   const { profile, workouts } = state;
-
-  function clearAll() {
-    if (confirm('לאפס את כל הנתונים? פעולה זו אינה הפיכה.')) {
-      localStorage.removeItem('liftlog.v2');
-      location.reload();
-    }
-  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -98,12 +101,7 @@ export default function Profile() {
 
       <CloudAccount />
 
-      <button
-        onClick={clearAll}
-        className="press glass flex items-center justify-center gap-2 rounded-[var(--r-lg)] py-3.5 text-sm font-bold text-rose-400"
-      >
-        <Trash2 className="size-4" /> איפוס כל הנתונים
-      </button>
+      <DataTools state={state} dispatch={dispatch} />
 
       <p className="text-center text-xs text-[var(--color-muted-foreground)]">LiftLog · גרסה 1.0</p>
     </div>
@@ -242,6 +240,102 @@ function CloudAccount() {
       >
         {mode === 'login' ? 'אין לך חשבון? הרשמה' : 'כבר יש לך חשבון? התחברות'}
       </button>
+    </GlassCard>
+  );
+}
+
+function DataTools({ state, dispatch }) {
+  const { user, replaceCloudState } = useCloud();
+  const fileRef = useRef(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+
+  function downloadBackup() {
+    const payload = {
+      app: 'MassApp',
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      state: syncedSlice(state),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `massapp-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setMsg('הגיבוי ירד למכשיר');
+    setErr('');
+  }
+
+  async function applyData(nextData) {
+    const next = syncedSlice(nextData.state || nextData);
+    dispatch({ type: 'replaceAll', data: next });
+    if (user) await replaceCloudState(next);
+  }
+
+  async function importBackup(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setBusy(true);
+    setMsg('');
+    setErr('');
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      await applyData(parsed);
+      setMsg(user ? 'הגיבוי יובא וסונכרן לענן' : 'הגיבוי יובא למכשיר');
+    } catch (importErr) {
+      setErr(importErr.message || 'ייבוא הגיבוי נכשל');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function clearAll() {
+    if (!confirm(user ? 'לאפס את כל הנתונים במכשיר ובענן? פעולה זו אינה הפיכה.' : 'לאפס את כל הנתונים במכשיר? פעולה זו אינה הפיכה.')) return;
+    setBusy(true);
+    setMsg('');
+    setErr('');
+    try {
+      const next = syncedSlice(seed());
+      dispatch({ type: 'resetAll' });
+      if (user) await replaceCloudState(next);
+      setMsg(user ? 'הנתונים אופסו גם בענן' : 'הנתונים אופסו במכשיר');
+    } catch (resetErr) {
+      setErr(resetErr.message || 'האיפוס נכשל');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <GlassCard className="flex flex-col gap-3">
+      <div>
+        <p className="text-sm font-bold">גיבוי ונתונים</p>
+        <p className="text-xs text-[var(--color-muted-foreground)]">ייצוא, ייבוא או איפוס מלא של נתוני האימונים</p>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={downloadBackup} className="press glass flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold">
+          <Download className="size-4" /> ייצוא
+        </button>
+        <button onClick={() => fileRef.current?.click()} disabled={busy} className="press glass flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold disabled:opacity-50">
+          <Upload className="size-4" /> ייבוא
+        </button>
+      </div>
+      <input ref={fileRef} type="file" accept="application/json,.json" onChange={importBackup} className="hidden" />
+      <button
+        onClick={clearAll}
+        disabled={busy}
+        className="press flex items-center justify-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 py-3 text-sm font-bold text-rose-300 disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+        איפוס כל הנתונים
+      </button>
+      {msg && <p className="text-xs font-semibold text-[var(--color-volt)]">{msg}</p>}
+      {err && <p className="text-xs font-semibold text-rose-400">{err}</p>}
     </GlassCard>
   );
 }

@@ -83,3 +83,14 @@ export function EmptyState({ icon: Icon, title, hint, action }) {
     </div>
   );
 }
+
+export function AppLoader({ label = 'טוען…' }) {
+  return (
+    <div className="flex min-h-40 items-center justify-center">
+      <div className="flex items-center gap-2 rounded-xl border border-[var(--hairline)] bg-white/[0.03] px-4 py-3 text-sm font-semibold text-[var(--color-muted-foreground)]">
+        <span className="size-2 rounded-full bg-[var(--color-volt)] motion-safe:animate-pulse" />
+        {label}
+      </div>
+    </div>
+  );
+}

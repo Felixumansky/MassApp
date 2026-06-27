@@ -80,7 +80,11 @@ export default function Library() {
                       <span className="flex-1 text-sm font-semibold leading-tight">{e.name}</span>
                       {e.custom && (
                         <button
-                          onClick={() => { vibrate(8); dispatch({ type: 'deleteCustomExercise', id: e.id }); }}
+                          onClick={() => {
+                            if (!confirm(`למחוק את "${e.name}" מהספרייה?`)) return;
+                            vibrate(8);
+                            dispatch({ type: 'deleteCustomExercise', id: e.id });
+                          }}
                           className="press shrink-0 text-[var(--color-muted-foreground)]"
                           aria-label="מחק תרגיל מותאם"
                         >

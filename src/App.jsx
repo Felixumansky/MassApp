@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar.jsx';
 import BottomNav from './components/BottomNav.jsx';
 import PageTransition from './components/PageTransition.jsx';
 import LockScreen from './components/LockScreen.jsx';
+import { AppLoader } from './components/ui.jsx';
 import { useCloud } from './cloud.jsx';
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
@@ -17,7 +18,7 @@ const Profile = lazy(() => import('./pages/Profile.jsx'));
 
 const page = (El) => (
   <PageTransition>
-    <Suspense fallback={null}>
+    <Suspense fallback={<AppLoader />}>
       <El />
     </Suspense>
   </PageTransition>

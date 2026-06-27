@@ -21,7 +21,29 @@ function loadAuth() {
   }
 }
 
-/** Cloud auth + last-write-wins state sync layered on top of the local store. */
+function byId(items = []) {
+  const map = new Map();
+  for (const item of items || []) {
+    if (item?.id) map.set(item.id, item);
+  }
+  return map;
+}
+
+function mergeList(local = [], remote = []) {
+  return [...new Map([...byId(remote), ...byId(local)]).values()];
+}
+
+function mergeSyncedState(local, remote = {}) {
+  return {
+    profile: Object.keys(remote.profile || {}).length ? { ...local.profile, ...remote.profile } : local.profile,
+    workouts: mergeList(local.workouts, remote.workouts).sort((a, b) => (a.date < b.date ? 1 : -1)),
+    routines: mergeList(local.routines, remote.routines),
+    bodyWeights: mergeList(local.bodyWeights, remote.bodyWeights).sort((a, b) => (a.date < b.date ? -1 : 1)),
+    customExercises: mergeList(local.customExercises, remote.customExercises),
+  };
+}
+
+/** Cloud auth + merge-on-pull state sync layered on top of the local store. */
 export function CloudProvider({ children }) {
   const { state, dispatch } = useStore();
   const [auth, setAuth] = useState(loadAuth); // { token, user, exp } | null
@@ -32,6 +54,8 @@ export function CloudProvider({ children }) {
   const [error, setError] = useState('');
   const ready = useRef(false); // gate pushes until initial pull/push done
   const pushTimer = useRef(null);
+  const retryTimer = useRef(null);
+  const latestSlice = useRef(null);
 
   const persistAuth = useCallback((next) => {
     if (next) {
@@ -56,6 +80,7 @@ export function CloudProvider({ children }) {
     [state.profile, state.workouts, state.routines, state.bodyWeights, state.customExercises]
   );
   const sliceKey = JSON.stringify(slice);
+  latestSlice.current = slice;
 
   // After auth, reconcile: pull server state, or seed it from local if empty.
   const reconcile = useCallback(
@@ -64,8 +89,10 @@ export function CloudProvider({ children }) {
       setError('');
       try {
         const { state: server, updatedAt } = await api.getState(token);
-        if (updatedAt && (server.workouts?.length || server.routines?.length || server.bodyWeights?.length)) {
-          dispatch({ type: 'replaceAll', data: server });
+        if (updatedAt && (server.workouts?.length || server.routines?.length || server.bodyWeights?.length || server.customExercises?.length)) {
+          const merged = mergeSyncedState(slice, server);
+          dispatch({ type: 'replaceAll', data: merged });
+          await api.putState(token, merged);
         } else {
           await api.putState(token, slice);
         }
@@ -105,6 +132,25 @@ export function CloudProvider({ children }) {
     setStatus('idle');
   }
 
+  async function replaceCloudState(nextSlice) {
+    if (!auth?.token) return;
+    clearTimeout(pushTimer.current);
+    clearTimeout(retryTimer.current);
+    ready.current = false;
+    setStatus('syncing');
+    setError('');
+    try {
+      await api.putState(auth.token, nextSlice);
+      ready.current = true;
+      setStatus('synced');
+    } catch (e) {
+      ready.current = true;
+      setStatus('error');
+      setError(e.message);
+      throw e;
+    }
+  }
+
   // Enroll the device fingerprint/face for quick unlock next time.
   async function enableBiometric() {
     if (!auth?.user) throw new Error('יש להתחבר תחילה');
@@ -135,16 +181,30 @@ export function CloudProvider({ children }) {
     if (!auth?.token || !ready.current) return undefined;
     setStatus('syncing');
     clearTimeout(pushTimer.current);
+    clearTimeout(retryTimer.current);
     pushTimer.current = setTimeout(async () => {
       try {
-        await api.putState(auth.token, slice);
+        await api.putState(auth.token, latestSlice.current);
         setStatus('synced');
       } catch (e) {
         setStatus('error');
         setError(e.message);
+        retryTimer.current = setTimeout(async () => {
+          try {
+            setStatus('syncing');
+            await api.putState(auth.token, latestSlice.current);
+            setStatus('synced');
+          } catch (retryErr) {
+            setStatus('error');
+            setError(retryErr.message);
+          }
+        }, 5000);
       }
     }, 900);
-    return () => clearTimeout(pushTimer.current);
+    return () => {
+      clearTimeout(pushTimer.current);
+      clearTimeout(retryTimer.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sliceKey, auth?.token]);
 
@@ -162,6 +222,7 @@ export function CloudProvider({ children }) {
       bioOn,
       enableBiometric,
       disableBiometric: turnOffBiometric,
+      replaceCloudState,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [auth, status, error, locked, bioOn]

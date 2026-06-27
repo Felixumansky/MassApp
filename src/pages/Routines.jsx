@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Plus, Pencil, Trash2, X, GripVertical } from 'lucide-react';
+import { Play, Plus, Pencil, Trash2, X, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, MuscleTag, EmptyState } from '../components/ui.jsx';
 import ExercisePicker from '../components/ExercisePicker.jsx';
-import { exerciseById } from '../lib/exercises.js';
+import { resolveExercise, routineExerciseId, routineExerciseTargets } from '../lib/exercises.js';
 import { uid, vibrate } from '../lib/utils.js';
 
 export default function Routines() {
@@ -17,6 +17,11 @@ export default function Routines() {
     vibrate(10);
     dispatch({ type: 'startWorkout', routine });
     navigate('/workout');
+  }
+
+  function deleteRoutine(routine) {
+    if (!confirm(`למחוק את "${routine.name || 'תוכנית ללא שם'}"?`)) return;
+    dispatch({ type: 'deleteRoutine', id: routine.id });
   }
 
   return (
@@ -43,7 +48,7 @@ export default function Routines() {
       ) : (
         <ul className="flex flex-col gap-3">
           {state.routines.map((r, i) => {
-            const muscles = [...new Set(r.exercises.map((id) => exerciseById(id)?.muscle).filter(Boolean))].slice(0, 4);
+            const muscles = [...new Set(r.exercises.map((entry) => resolveExercise(routineExerciseId(entry), state.customExercises)?.muscle).filter(Boolean))].slice(0, 4);
             return (
               <li key={r.id} className="fade-up" style={{ '--d': `${0.05 * i}s` }}>
                 <GlassCard className="flex flex-col gap-3">
@@ -56,7 +61,7 @@ export default function Routines() {
                       <button onClick={() => setEditing({ ...r })} className="press flex size-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)]" aria-label="ערוך">
                         <Pencil className="size-4" />
                       </button>
-                      <button onClick={() => dispatch({ type: 'deleteRoutine', id: r.id })} className="press flex size-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)]" aria-label="מחק">
+                      <button onClick={() => deleteRoutine(r)} className="press flex size-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)]" aria-label="מחק">
                         <Trash2 className="size-4" />
                       </button>
                     </div>
@@ -90,8 +95,33 @@ function RoutineEditor({ draft, onClose, onSave }) {
 }
 
 function RoutineEditorInner({ draft, picker, setPicker, onClose, onSave }) {
+  const { state } = useStore();
   const [name, setName] = useState(draft.name);
   const [exercises, setExercises] = useState(draft.exercises);
+
+  function updateEntry(idx, patch) {
+    setExercises((xs) =>
+      xs.map((entry, i) =>
+        i === idx
+          ? {
+              exerciseId: routineExerciseId(entry),
+              ...routineExerciseTargets(entry),
+              ...patch,
+            }
+          : entry
+      )
+    );
+  }
+
+  function moveEntry(idx, dir) {
+    setExercises((xs) => {
+      const next = [...xs];
+      const target = idx + dir;
+      if (target < 0 || target >= next.length) return xs;
+      [next[idx], next[target]] = [next[target], next[idx]];
+      return next;
+    });
+  }
 
   return (
     <AnimatePresence>
@@ -122,15 +152,49 @@ function RoutineEditorInner({ draft, picker, setPicker, onClose, onSave }) {
           ) : (
             <ul className="flex flex-col gap-2">
               {exercises.map((id, idx) => {
-                const ex = exerciseById(id);
+                const exerciseId = routineExerciseId(id);
+                const targets = routineExerciseTargets(id);
+                const ex = resolveExercise(exerciseId, state.customExercises);
                 return (
-                  <li key={`${id}-${idx}`} className="glass flex items-center gap-2 rounded-2xl px-3 py-2.5">
-                    <GripVertical className="size-4 text-[var(--color-muted-foreground)]" />
-                    <span className="flex-1 text-sm font-semibold">{ex?.name ?? id}</span>
-                    <MuscleTag muscle={ex?.muscle} />
-                    <button onClick={() => setExercises((xs) => xs.filter((_, i) => i !== idx))} className="press text-[var(--color-muted-foreground)]" aria-label="הסר">
-                      <X className="size-4" />
-                    </button>
+                  <li key={`${exerciseId}-${idx}`} className="glass flex flex-col gap-2 rounded-2xl px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <GripVertical className="size-4 text-[var(--color-muted-foreground)]" />
+                      <span className="flex-1 text-sm font-semibold">{ex?.name ?? exerciseId}</span>
+                      <MuscleTag muscle={ex?.muscle} />
+                      <button onClick={() => moveEntry(idx, -1)} disabled={idx === 0} className="press text-[var(--color-muted-foreground)] disabled:opacity-30" aria-label="הזז למעלה">
+                        <ArrowUp className="size-4" />
+                      </button>
+                      <button onClick={() => moveEntry(idx, 1)} disabled={idx === exercises.length - 1} className="press text-[var(--color-muted-foreground)] disabled:opacity-30" aria-label="הזז למטה">
+                        <ArrowDown className="size-4" />
+                      </button>
+                      <button onClick={() => setExercises((xs) => xs.filter((_, i) => i !== idx))} className="press text-[var(--color-muted-foreground)]" aria-label="הסר">
+                        <X className="size-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-2 py-1.5 text-xs text-[var(--color-muted-foreground)]">
+                        סטים
+                        <input
+                          type="number"
+                          min="1"
+                          max="12"
+                          value={targets.targetSets}
+                          onChange={(e) => updateEntry(idx, { targetSets: e.target.value })}
+                          className="tnum min-w-0 flex-1 bg-transparent text-end font-bold text-[var(--color-card-foreground)] outline-none"
+                        />
+                      </label>
+                      <label className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-2 py-1.5 text-xs text-[var(--color-muted-foreground)]">
+                        חזרות
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={targets.targetReps}
+                          onChange={(e) => updateEntry(idx, { targetReps: e.target.value })}
+                          placeholder="ריק"
+                          className="tnum min-w-0 flex-1 bg-transparent text-end font-bold text-[var(--color-card-foreground)] outline-none placeholder:text-[var(--color-muted-foreground)]"
+                        />
+                      </label>
+                    </div>
                   </li>
                 );
               })}
@@ -153,7 +217,7 @@ function RoutineEditorInner({ draft, picker, setPicker, onClose, onSave }) {
         <ExercisePicker
           open={picker}
           onClose={() => setPicker(false)}
-          onPick={(id) => { setExercises((xs) => [...xs, id]); setPicker(false); }}
+          onPick={(id) => { setExercises((xs) => [...xs, { exerciseId: id, targetSets: 3, targetReps: '' }]); setPicker(false); }}
         />
       </motion.div>
     </AnimatePresence>

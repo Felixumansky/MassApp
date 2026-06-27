@@ -57,3 +57,20 @@ export const EXERCISES = [
 ];
 
 export const exerciseById = (id) => EXERCISES.find((e) => e.id === id);
+
+export function resolveExercise(id, customExercises = []) {
+  return (customExercises || []).find((e) => e.id === id) || exerciseById(id);
+}
+
+export function routineExerciseId(entry) {
+  return typeof entry === 'string' ? entry : entry?.exerciseId;
+}
+
+export function routineExerciseTargets(entry) {
+  return typeof entry === 'string'
+    ? { targetSets: 3, targetReps: '' }
+    : {
+        targetSets: Number(entry?.targetSets) || 3,
+        targetReps: entry?.targetReps || '',
+      };
+}
