@@ -1,11 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { biometricSupported } from '../lib/biometric.js';
-import { User, Target, Trash2, Zap, Cloud, CloudOff, LogOut, Loader2, CheckCircle2, AlertCircle, ChevronRight, Fingerprint, Download, Upload } from 'lucide-react';
+import {
+  User,
+  Target,
+  Trash2,
+  Zap,
+  Cloud,
+  CloudOff,
+  LogOut,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  ChevronRight,
+  Fingerprint,
+  Download,
+  Upload,
+  MapPin,
+  LocateFixed,
+  RadioTower,
+} from 'lucide-react';
 import { seed, useStore } from '../store.jsx';
 import { useCloud } from '../cloud.jsx';
 import { PageHeader, GlassCard } from '../components/ui.jsx';
 import { vibrate } from '../lib/utils.js';
+import { hasGymLocation } from '../lib/gymAutoStart.js';
 
 function syncedSlice(data) {
   return {
@@ -99,12 +118,134 @@ export default function Profile() {
         </Field>
       </GlassCard>
 
+      <GymAutoStartCard profile={profile} routines={state.routines} dispatch={dispatch} />
+
       <CloudAccount />
 
       <DataTools state={state} dispatch={dispatch} />
 
       <p className="text-center text-xs text-[var(--color-muted-foreground)]">LiftLog · גרסה 1.0</p>
     </div>
+  );
+}
+
+function GymAutoStartCard({ profile, routines, dispatch }) {
+  const config = profile.gymAutoStart;
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const hasLocation = hasGymLocation(config);
+
+  function patchGymAutoStart(patch) {
+    dispatch({ type: 'profile', patch: { gymAutoStart: { ...config, ...patch } } });
+  }
+
+  function saveCurrentLocation() {
+    setMsg('');
+    setErr('');
+    if (!navigator.geolocation) {
+      setErr('המכשיר לא תומך בזיהוי מיקום בדפדפן הזה');
+      return;
+    }
+
+    setBusy(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        patchGymAutoStart({
+          enabled: true,
+          latitude: Number(position.coords.latitude.toFixed(6)),
+          longitude: Number(position.coords.longitude.toFixed(6)),
+        });
+        setMsg('מיקום המכון נשמר');
+        setBusy(false);
+        vibrate(10);
+      },
+      () => {
+        setErr('לא ניתן היה לקבל מיקום. בדוק שהרשאת המיקום פתוחה');
+        setBusy(false);
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
+    );
+  }
+
+  return (
+    <GlassCard className="flex flex-col gap-4">
+      <div className="flex items-start gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl" style={{ background: 'rgba(94,194,245,0.12)' }}>
+          <MapPin className="size-5 text-[var(--color-cyan)]" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold">התחלה אוטומטית במכון</p>
+          <p className="text-xs leading-5 text-[var(--color-muted-foreground)]">
+            עובד כשהאפליקציה פתוחה. לזיהוי ברקע מלא צריך גרסת Android/iPhone native.
+          </p>
+        </div>
+        <button
+          onClick={() => patchGymAutoStart({ enabled: !config.enabled })}
+          role="switch"
+          aria-checked={config.enabled}
+          aria-label="התחלה אוטומטית במכון"
+          className="press relative h-6 w-11 shrink-0 rounded-full transition-colors"
+          style={{ background: config.enabled ? 'var(--color-volt)' : 'rgba(255,255,255,0.12)' }}
+        >
+          <span
+            className="absolute top-0.5 size-5 rounded-full bg-white transition-all"
+            style={{ insetInlineStart: config.enabled ? '1.5rem' : '0.125rem' }}
+          />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          onClick={saveCurrentLocation}
+          disabled={busy}
+          className="press glass flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold disabled:opacity-50"
+        >
+          {busy ? <Loader2 className="size-4 animate-spin" /> : <LocateFixed className="size-4 text-[var(--color-cyan)]" />}
+          שמור מיקום
+        </button>
+        <label className="glass flex items-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold">
+          <RadioTower className="size-4 text-[var(--color-muted-foreground)]" />
+          <input
+            type="number"
+            min="30"
+            max="500"
+            step="10"
+            inputMode="numeric"
+            value={config.radiusM}
+            onChange={(e) => patchGymAutoStart({ radiusM: Math.max(30, Math.min(500, Number(e.target.value) || 120)) })}
+            className="tnum min-w-0 flex-1 bg-transparent text-center outline-none"
+            aria-label="רדיוס זיהוי במטרים"
+          />
+          מ׳
+        </label>
+      </div>
+
+      <label className="flex flex-col gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
+        אימון שייפתח בהגעה
+        <select
+          value={config.routineId || 'free'}
+          onChange={(e) => patchGymAutoStart({ routineId: e.target.value })}
+          className="glass rounded-2xl px-4 py-3 text-sm font-bold text-[var(--color-card-foreground)] outline-none [color-scheme:dark]"
+        >
+          <option value="free" style={{ background: '#15181d', color: '#e7ecf1' }}>אימון חופשי</option>
+          {routines.map((routine) => (
+            <option key={routine.id} value={routine.id} style={{ background: '#15181d', color: '#e7ecf1' }}>
+              {routine.name || 'תוכנית ללא שם'}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {hasLocation && (
+        <p className="tnum text-xs font-semibold text-[var(--color-muted-foreground)]">
+          נשמר: {Number(config.latitude).toFixed(5)}, {Number(config.longitude).toFixed(5)}
+        </p>
+      )}
+      {!hasLocation && <p className="text-xs font-semibold text-amber-300">שמור מיקום כדי שהזיהוי יוכל לפעול.</p>}
+      {msg && <p className="text-xs font-semibold text-[var(--color-volt)]">{msg}</p>}
+      {err && <p className="text-xs font-semibold text-rose-400">{err}</p>}
+    </GlassCard>
   );
 }
 

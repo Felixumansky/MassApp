@@ -15,9 +15,37 @@ const STARTER = {
   exercises: ['bench-press', 'ohp', 'incline-db-press', 'lateral-raise', 'triceps-pushdown'],
 };
 
+export const DEFAULT_GYM_AUTO_START = {
+  enabled: false,
+  latitude: '',
+  longitude: '',
+  radiusM: 120,
+  routineId: 'free',
+};
+
+function profileDefaults() {
+  return {
+    name: '',
+    unit: 'kg',
+    weeklyGoal: 4,
+    gymAutoStart: DEFAULT_GYM_AUTO_START,
+  };
+}
+
+function normalizeProfile(profile = {}) {
+  return {
+    ...profileDefaults(),
+    ...profile,
+    gymAutoStart: {
+      ...DEFAULT_GYM_AUTO_START,
+      ...(profile.gymAutoStart || {}),
+    },
+  };
+}
+
 export function seed() {
   return {
-    profile: { name: '', unit: 'kg', weeklyGoal: 4 },
+    profile: profileDefaults(),
     routines: [
       STARTER,
       { id: 'r-ppl-pull', name: 'Pull — משיכה', exercises: ['deadlift', 'pullup', 'seated-row', 'barbell-curl', 'face-pull'] },
@@ -33,7 +61,10 @@ export function seed() {
 function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return { ...seed(), ...JSON.parse(raw) };
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { ...seed(), ...parsed, profile: normalizeProfile(parsed.profile) };
+    }
   } catch {
     /* ignore */
   }
@@ -46,13 +77,16 @@ export function reducer(state, action) {
       return seed();
 
     case 'profile':
-      return { ...state, profile: { ...state.profile, ...action.patch } };
+      return { ...state, profile: normalizeProfile({ ...state.profile, ...action.patch }) };
 
     case 'replaceAll':
       // Replace synced slices from the cloud; keep any in-progress workout local.
       return {
         ...state,
-        profile: action.data.profile && Object.keys(action.data.profile).length ? action.data.profile : state.profile,
+        profile:
+          action.data.profile && Object.keys(action.data.profile).length
+            ? normalizeProfile(action.data.profile)
+            : state.profile,
         workouts: action.data.workouts || [],
         routines: action.data.routines || [],
         bodyWeights: action.data.bodyWeights || [],

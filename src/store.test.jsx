@@ -111,5 +111,18 @@ describe('store reducer', () => {
     const next = reducer(state, { type: 'resetAll' });
     expect(next.workouts).toEqual([]);
     expect(next.profile.unit).toBe('kg');
+    expect(next.profile.gymAutoStart.enabled).toBe(false);
+  });
+
+  it('keeps gym auto-start defaults when updating older profile data', () => {
+    const state = { ...seed(), profile: { name: 'Dev', unit: 'kg', weeklyGoal: 4 } };
+    const next = reducer(state, { type: 'profile', patch: { name: 'Dana' } });
+
+    expect(next.profile.name).toBe('Dana');
+    expect(next.profile.gymAutoStart).toMatchObject({
+      enabled: false,
+      radiusM: 120,
+      routineId: 'free',
+    });
   });
 });
