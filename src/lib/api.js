@@ -1,6 +1,19 @@
 const RAW_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
 const BASE = RAW_BASE.endsWith('/api') ? RAW_BASE.slice(0, -4) : RAW_BASE;
 
+const GENERIC_ERROR = 'משהו השתבש. נסו שוב בעוד רגע.';
+
+// מציג ללקוח רק הודעות נעימות בעברית. הודעות טכניות (אנגלית/stack/fetch failed)
+// שמגיעות בטעות מהשרת או מהתשתית מוחלפות בהודעה כללית, כדי שלא ייחשפו למשתמש.
+function friendlyMessage(raw) {
+  const msg = String(raw || '').trim();
+  if (!msg) return GENERIC_ERROR;
+  const technical = /fetch failed|typeerror|referenceerror|undefined|null|econn|enotfound|timeout|stack|at \w|<!doctype|status code|\b5\d\d\b/i;
+  // הודעה נחשבת ידידותית רק אם היא בעברית ולא נראית טכנית.
+  if (/[֐-׿]/.test(msg) && !technical.test(msg)) return msg;
+  return GENERIC_ERROR;
+}
+
 async function req(path, { method = 'GET', token, body } = {}) {
   let res;
   try {
@@ -13,10 +26,10 @@ async function req(path, { method = 'GET', token, body } = {}) {
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
-    throw new Error('אין חיבור לשרת');
+    throw new Error('אין חיבור לשרת. בדקו את החיבור לאינטרנט ונסו שוב.');
   }
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'שגיאת שרת');
+  if (!res.ok) throw new Error(friendlyMessage(data.error));
   return data;
 }
 
