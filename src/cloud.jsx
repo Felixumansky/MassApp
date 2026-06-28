@@ -4,8 +4,24 @@ import { useStore } from './store.jsx';
 import { biometricEnabled, registerBiometric, verifyBiometric, disableBiometric } from './lib/biometric.js';
 
 const AUTH_KEY = 'liftlog.auth';
+const UNLOCK_KEY = 'liftlog.unlockUntil'; // remember a biometric unlock for a while
 const MONTH_MS = 30 * 864e5; // keep the session alive for a month
 const Ctx = createContext(null);
+
+/** Did the user unlock recently enough that we can skip the fingerprint prompt? */
+function unlockFresh() {
+  const until = Number(localStorage.getItem(UNLOCK_KEY));
+  return until > Date.now();
+}
+
+/** Remember that the session is unlocked for the next month. */
+function rememberUnlock() {
+  localStorage.setItem(UNLOCK_KEY, String(Date.now() + MONTH_MS));
+}
+
+function clearUnlock() {
+  localStorage.removeItem(UNLOCK_KEY);
+}
 
 function loadAuth() {
   try {
