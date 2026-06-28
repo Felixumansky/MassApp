@@ -268,10 +268,12 @@ function RetroWorkoutMeta({ active, dispatch }) {
   );
 }
 
+const setGridClass = "grid grid-cols-[1.7rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_2.2rem] items-center gap-1.5";
+
 function ExerciseCard({ ex, unit, priorBest, onToggle, dispatch }) {
   const doneCount = ex.sets.filter((s) => s.done).length;
   return (
-    <GlassCard className="flex flex-col gap-3 p-3.5">
+    <GlassCard className="min-w-0 overflow-hidden flex flex-col gap-3 p-3.5">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <span className="font-bold">{ex.name}</span>
@@ -286,7 +288,7 @@ function ExerciseCard({ ex, unit, priorBest, onToggle, dispatch }) {
         </button>
       </div>
 
-      <div className="grid grid-cols-[1.7rem_1fr_1fr_0.8fr_2.2rem] items-center gap-1.5 text-[11px] font-semibold text-[var(--color-muted-foreground)]">
+      <div className={`${setGridClass} text-[11px] font-semibold text-[var(--color-muted-foreground)]`}>
         <span className="text-center">סט</span>
         <span className="text-center">חזרות</span>
         <span className="text-center">משקל ({unitLabel(unit)})</span>
@@ -295,7 +297,7 @@ function ExerciseCard({ ex, unit, priorBest, onToggle, dispatch }) {
       </div>
 
       {ex.sets.map((s, i) => (
-        <div key={s.id} className="grid grid-cols-[1.7rem_1fr_1fr_0.8fr_2.2rem] items-center gap-1.5">
+        <div key={s.id} className={setGridClass}>
           <span className="tnum text-center text-sm font-bold text-[var(--color-muted-foreground)]">{i + 1}</span>
           <input
             type="number"
@@ -303,7 +305,7 @@ function ExerciseCard({ ex, unit, priorBest, onToggle, dispatch }) {
             value={s.reps}
             onChange={(e) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { reps: e.target.value } })}
             placeholder="—"
-            className="tnum rounded-xl bg-white/5 py-2.5 text-center text-base font-bold outline-none focus:bg-white/10"
+            className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-base font-bold outline-none focus:bg-white/10"
             aria-label={`חזרות סט ${i + 1}`}
           />
           <WeightInput
@@ -311,7 +313,7 @@ function ExerciseCard({ ex, unit, priorBest, onToggle, dispatch }) {
             unit={unit}
             onCommit={(kg) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { weight: kg } })}
             placeholder="—"
-            className="tnum rounded-xl bg-white/5 py-2.5 text-center text-base font-bold outline-none focus:bg-white/10"
+            className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-base font-bold outline-none focus:bg-white/10"
             aria-label={`משקל סט ${i + 1}`}
           />
           <input

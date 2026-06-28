@@ -32,7 +32,7 @@ export default function BottomNav() {
 
       <button
         onClick={startOrResume}
-        className="btn-volt press -mt-7 flex size-14 shrink-0 items-center justify-center rounded-full"
+        className="btn-volt press relative -mt-7 flex size-14 shrink-0 items-center justify-center rounded-full"
         aria-label={state.active ? 'המשך אימון' : 'התחל אימון'}
       >
         <Plus className="size-7" strokeWidth={2.6} />
