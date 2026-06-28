@@ -29,12 +29,17 @@ function loadAuth() {
     if (!a?.token) return null;
     if (a.exp && Date.now() > a.exp) {
       localStorage.removeItem(AUTH_KEY); // expired — force a fresh login
+      clearUnlock();
       return null;
     }
     return a;
   } catch {
     return null;
   }
+}
+
+function shouldLockSavedSession() {
+  return !!(loadAuth() && biometricEnabled() && !unlockFresh());
 }
 
 function byId(items = []) {
@@ -64,7 +69,7 @@ export function CloudProvider({ children }) {
   const { state, dispatch } = useStore();
   const [auth, setAuth] = useState(loadAuth); // { token, user, exp } | null
   // Gate the UI behind biometrics when a remembered session is protected.
-  const [locked, setLocked] = useState(() => !!(loadAuth() && biometricEnabled()));
+  const [locked, setLocked] = useState(shouldLockSavedSession);
   const [bioOn, setBioOn] = useState(biometricEnabled);
   const [status, setStatus] = useState('idle'); // idle | syncing | synced | error
   const [error, setError] = useState('');
@@ -126,6 +131,7 @@ export function CloudProvider({ children }) {
     setError('');
     const { token, user } = await api.login(email, password);
     persistAuth({ token, user });
+    rememberUnlock();
     setLocked(false);
     await reconcile(token);
   }
@@ -134,6 +140,7 @@ export function CloudProvider({ children }) {
     setError('');
     const { token, user } = await api.register(email, password);
     persistAuth({ token, user });
+    rememberUnlock();
     setLocked(false);
     await reconcile(token);
   }
@@ -142,6 +149,7 @@ export function CloudProvider({ children }) {
     if (auth?.token) api.logout(auth.token);
     ready.current = false;
     persistAuth(null);
+    clearUnlock();
     disableBiometric(); // nothing left to unlock
     setBioOn(false);
     setLocked(false);
@@ -171,17 +179,20 @@ export function CloudProvider({ children }) {
   async function enableBiometric() {
     if (!auth?.user) throw new Error('יש להתחבר תחילה');
     await registerBiometric(auth.user);
+    rememberUnlock();
     setBioOn(true);
   }
 
   function turnOffBiometric() {
     disableBiometric();
+    clearUnlock();
     setBioOn(false);
   }
 
   // Unlock a remembered session with the device biometric.
   async function unlock() {
     await verifyBiometric(); // throws if it fails / is cancelled
+    rememberUnlock();
     setLocked(false);
     if (auth?.token && !ready.current) reconcile(auth.token);
   }
