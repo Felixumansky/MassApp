@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Dumbbell, Play, ChevronLeft, Layers, User, CalendarClock, X } from 'lucide-react';
+import { Flame, Dumbbell, Play, ChevronLeft, Layers, User, CalendarClock } from 'lucide-react';
 import { useStore } from '../store.jsx';
+import { useCloud } from '../cloud.jsx';
 import { PageHeader, GlassCard } from '../components/ui.jsx';
 import WorkoutHistoryList from '../components/WorkoutHistory.jsx';
+import RetroWorkoutSheet from '../components/RetroWorkoutSheet.jsx';
 import { workoutVolume, dayKey, fmtWeight, unitLabel } from '../lib/utils.js';
-import { useDialogFocus } from '../lib/useDialogFocus.js';
 
 function greeting() {
   const h = new Date().getHours();
@@ -32,6 +32,7 @@ function computeStreak(workouts) {
 
 export default function Dashboard() {
   const { state, dispatch } = useStore();
+  const { user } = useCloud();
   const navigate = useNavigate();
   const { workouts, profile, active } = state;
   const unit = profile.unit || 'kg';
@@ -61,10 +62,16 @@ export default function Dashboard() {
         action={
           <button
             onClick={() => navigate('/profile')}
-            aria-label="פרופיל"
-            className="press glass flex size-11 shrink-0 items-center justify-center rounded-2xl lg:hidden"
+            aria-label={user ? 'פרופיל — מחובר/ת' : 'פרופיל'}
+            className="press glass relative flex size-11 shrink-0 items-center justify-center rounded-2xl lg:hidden"
           >
             <User className="size-5 text-[var(--color-muted-foreground)]" />
+            {user && (
+              <span
+                className="absolute -end-0.5 -top-0.5 size-3 rounded-full bg-[var(--color-volt)] ring-2 ring-[#07090a]"
+                aria-hidden="true"
+              />
+            )}
           </button>
         }
       />
@@ -128,19 +135,6 @@ export default function Dashboard() {
 
 function RetroWorkoutButton({ routines, onStart }) {
   const [open, setOpen] = useState(false);
-  const [date, setDate] = useState(dayKey());
-  const [durationMin, setDurationMin] = useState(60);
-  const [routineId, setRoutineId] = useState('free');
-  const today = dayKey();
-  const dialogRef = useDialogFocus(open, () => setOpen(false));
-
-  function submit(e) {
-    e.preventDefault();
-    const minutes = Math.max(1, Math.round(Number(durationMin) || 1));
-    const routine = routines.find((r) => r.id === routineId);
-    onStart({ retroactive: true, date, durationSec: minutes * 60, routine });
-    setOpen(false);
-  }
 
   return (
     <>
@@ -152,74 +146,15 @@ function RetroWorkoutButton({ routines, onStart }) {
         רשום אימון קודם
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setOpen(false)} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.form
-              ref={dialogRef}
-              onSubmit={submit}
-              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 320, damping: 34 }}
-              className="solid shadow-[var(--shadow-overlay)] fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md flex-col gap-3 rounded-t-2xl p-5 pb-[max(1.25rem,var(--safe-b))]"
-              role="dialog" aria-modal="true" aria-label="רישום אימון קודם"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-bold">רישום אימון קודם</h2>
-                <button type="button" onClick={() => setOpen(false)} className="press glass flex size-9 items-center justify-center rounded-xl" aria-label="סגור">
-                  <X className="size-4" />
-                </button>
-              </div>
-
-              <label className="flex flex-col gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
-                תאריך
-                <input
-                  type="date"
-                  value={date}
-                  max={today}
-                  onChange={(e) => setDate(e.target.value)}
-                  className="tnum glass rounded-2xl px-4 py-3 text-sm font-bold text-[var(--color-card-foreground)] outline-none [color-scheme:dark]"
-                  required
-                />
-              </label>
-
-              <label className="flex flex-col gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
-                משך בדקות
-                <input
-                  type="number"
-                  min="1"
-                  inputMode="numeric"
-                  value={durationMin}
-                  onChange={(e) => setDurationMin(e.target.value)}
-                  className="tnum glass rounded-2xl px-4 py-3 text-sm font-bold text-[var(--color-card-foreground)] outline-none"
-                  required
-                />
-              </label>
-
-              <label className="flex flex-col gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
-                אימון
-                <select
-                  value={routineId}
-                  onChange={(e) => setRoutineId(e.target.value)}
-                  className="glass rounded-2xl px-4 py-3 text-sm font-bold text-[var(--color-card-foreground)] outline-none [color-scheme:dark]"
-                >
-                  <option value="free" style={{ background: '#15181d', color: '#e7ecf1' }}>אימון חופשי</option>
-                  {routines.map((r) => (
-                    <option key={r.id} value={r.id} style={{ background: '#15181d', color: '#e7ecf1' }}>{r.name || 'תוכנית ללא שם'}</option>
-                  ))}
-                </select>
-              </label>
-
-              <button type="submit" className="btn-volt press mt-1 rounded-2xl py-3.5 text-sm font-bold">
-                המשך לרישום סטים
-              </button>
-            </motion.form>
-          </>
-        )}
-      </AnimatePresence>
+      <RetroWorkoutSheet
+        open={open}
+        onClose={() => setOpen(false)}
+        routines={routines}
+        onStart={(payload) => {
+          onStart(payload);
+          setOpen(false);
+        }}
+      />
     </>
   );
 }

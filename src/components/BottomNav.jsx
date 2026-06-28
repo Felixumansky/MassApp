@@ -1,10 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, Dumbbell, ClipboardList, TrendingUp, Plus } from 'lucide-react';
+import { Home, CalendarDays, Dumbbell, ClipboardList, TrendingUp, Plus } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { vibrate } from '../lib/utils.js';
 
 const items = [
   { to: '/', label: 'בית', icon: Home },
+  { to: '/calendar', label: 'יומן', icon: CalendarDays },
   { to: '/library', label: 'תרגילים', icon: Dumbbell },
   { to: '/routines', label: 'תוכניות', icon: ClipboardList },
   { to: '/progress', label: 'התקדמות', icon: TrendingUp },
@@ -52,7 +53,7 @@ function Tab({ to, label, icon: Icon }) {
     <NavLink
       to={to}
       onClick={() => vibrate(5)}
-      className="press flex w-16 flex-col items-center gap-0.5 py-1 text-[11px] font-medium"
+      className="press flex w-[3.25rem] flex-col items-center gap-0.5 py-1 text-[11px] font-medium"
     >
       {({ isActive }) => (
         <>
