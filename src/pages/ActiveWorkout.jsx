@@ -234,7 +234,7 @@ function RetroWorkoutMeta({ active, dispatch }) {
   const durationMin = Math.max(1, Math.round((Number(active.durationSec) || 60) / 60));
 
   return (
-    <GlassCard className="mb-4 grid grid-cols-2 gap-3 p-3.5">
+    <GlassCard className="mb-4 grid grid-cols-1 gap-3 p-3.5 sm:grid-cols-2">
       <label className="flex flex-col gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
         תאריך
         <span className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2.5">
@@ -268,27 +268,27 @@ function RetroWorkoutMeta({ active, dispatch }) {
   );
 }
 
-const setGridClass = "grid grid-cols-[1.7rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_2.2rem] items-center gap-1.5";
+const setGridClass = 'grid grid-cols-1 gap-2 sm:grid-cols-[1.7rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_2.2rem] sm:items-center sm:gap-1.5';
 
 function ExerciseCard({ ex, unit, priorBest, onToggle, dispatch }) {
   const doneCount = ex.sets.filter((s) => s.done).length;
   return (
     <GlassCard className="min-w-0 overflow-hidden flex flex-col gap-3 p-3.5">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2.5">
           <span className="font-bold">{ex.name}</span>
           <MuscleTag muscle={ex.muscle} />
         </div>
         <button
           onClick={() => dispatch({ type: 'removeExercise', uid: ex.uid })}
-          className="press flex size-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)]"
+          className="press flex size-8 items-center justify-center self-end rounded-lg text-[var(--color-muted-foreground)] sm:self-auto"
           aria-label="הסר תרגיל"
         >
           <Trash2 className="size-4" />
         </button>
       </div>
 
-      <div className={`${setGridClass} text-[11px] font-semibold text-[var(--color-muted-foreground)]`}>
+      <div className={`${setGridClass} hidden text-[11px] font-semibold text-[var(--color-muted-foreground)] sm:grid`}>
         <span className="text-center">סט</span>
         <span className="text-center">חזרות</span>
         <span className="text-center">משקל ({unitLabel(unit)})</span>
@@ -297,40 +297,52 @@ function ExerciseCard({ ex, unit, priorBest, onToggle, dispatch }) {
       </div>
 
       {ex.sets.map((s, i) => (
-        <div key={s.id} className={setGridClass}>
-          <span className="tnum text-center text-sm font-bold text-[var(--color-muted-foreground)]">{i + 1}</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            value={s.reps}
-            onChange={(e) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { reps: e.target.value } })}
-            placeholder="—"
-            className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-base font-bold outline-none focus:bg-white/10"
-            aria-label={`חזרות סט ${i + 1}`}
-          />
-          <WeightInput
-            kg={s.weight}
-            unit={unit}
-            onCommit={(kg) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { weight: kg } })}
-            placeholder="—"
-            className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-base font-bold outline-none focus:bg-white/10"
-            aria-label={`משקל סט ${i + 1}`}
-          />
-          <input
-            type="number"
-            inputMode="decimal"
-            min="1"
-            max="10"
-            step="0.5"
-            value={s.rpe || ''}
-            onChange={(e) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { rpe: e.target.value } })}
-            placeholder="—"
-            className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-sm font-bold outline-none focus:bg-white/10"
-            aria-label={`RPE סט ${i + 1}`}
-          />
+        <div key={s.id} className={`${setGridClass} rounded-xl border border-[var(--hairline)] bg-white/[0.025] p-2.5 sm:border-0 sm:bg-transparent sm:p-0`}>
+          <span className="flex items-center justify-between text-xs font-semibold text-[var(--color-muted-foreground)] sm:block sm:text-center">
+            <span className="sm:hidden">סט</span>
+            <span className="tnum text-sm font-bold">{i + 1}</span>
+          </span>
+          <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--color-muted-foreground)] sm:block">
+            <span className="sm:hidden">חזרות</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              value={s.reps}
+              onChange={(e) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { reps: e.target.value } })}
+              placeholder="—"
+              className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-base font-bold text-[var(--color-card-foreground)] outline-none focus:bg-white/10 sm:w-full"
+              aria-label={`חזרות סט ${i + 1}`}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--color-muted-foreground)] sm:block">
+            <span className="sm:hidden">משקל ({unitLabel(unit)})</span>
+            <WeightInput
+              kg={s.weight}
+              unit={unit}
+              onCommit={(kg) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { weight: kg } })}
+              placeholder="—"
+              className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-base font-bold text-[var(--color-card-foreground)] outline-none focus:bg-white/10 sm:w-full"
+              aria-label={`משקל סט ${i + 1}`}
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--color-muted-foreground)] sm:block">
+            <span className="sm:hidden">RPE</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              min="1"
+              max="10"
+              step="0.5"
+              value={s.rpe || ''}
+              onChange={(e) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { rpe: e.target.value } })}
+              placeholder="—"
+              className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-sm font-bold text-[var(--color-card-foreground)] outline-none focus:bg-white/10 sm:w-full"
+              aria-label={`RPE סט ${i + 1}`}
+            />
+          </label>
           <button
             onClick={() => onToggle(ex.uid, s)}
-            className="press relative flex size-9 items-center justify-center justify-self-center rounded-xl transition-colors"
+            className="press relative flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-colors sm:size-9 sm:w-auto sm:justify-self-center sm:p-0"
             style={{
               background: s.done ? 'var(--color-volt)' : 'rgba(255,255,255,0.06)',
               color: s.done ? '#0a1500' : '#94a3b8',
@@ -339,6 +351,7 @@ function ExerciseCard({ ex, unit, priorBest, onToggle, dispatch }) {
             aria-pressed={s.done}
           >
             <Check className="size-4" strokeWidth={3} />
+            <span className="sm:hidden">{s.done ? 'הושלם' : 'סמן כהושלם'}</span>
             {s.done && epley1rm(s.weight, s.reps) > priorBest && (
               <Sparkles className="absolute -end-1 -top-1 size-3.5 text-[var(--color-amber)]" />
             )}
@@ -357,7 +370,7 @@ function ExerciseCard({ ex, unit, priorBest, onToggle, dispatch }) {
         />
       </label>
 
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <button
           onClick={() => dispatch({ type: 'addSet', uid: ex.uid })}
           className="press flex-1 rounded-xl bg-white/5 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
@@ -366,7 +379,7 @@ function ExerciseCard({ ex, unit, priorBest, onToggle, dispatch }) {
         </button>
         <button
           onClick={() => dispatch({ type: 'duplicateSet', uid: ex.uid, setId: ex.sets.at(-1).id })}
-          className="press flex items-center gap-1 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
+          className="press flex items-center justify-center gap-1 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
         >
           <Copy className="size-3.5" /> שכפל
         </button>
