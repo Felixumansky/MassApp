@@ -50,6 +50,30 @@ describe('store reducer', () => {
     expect(next.workouts[0].exercises[0].sets).toEqual([{ id: 's-1', reps: '5', weight: '100', rpe: '8', done: true }]);
   });
 
+  it('does not discard an active workout when no completed sets can be saved', () => {
+    const started = reducer(seed(), { type: 'startWorkout' });
+    const withExercise = {
+      ...started,
+      active: {
+        ...started.active,
+        exercises: [
+          {
+            uid: 'ex-1',
+            exerciseId: 'bench-press',
+            name: 'לחיצת חזה במוט',
+            muscle: 'chest',
+            sets: [{ id: 's-1', reps: '5', weight: '100', rpe: '', done: false }],
+          },
+        ],
+      },
+    };
+
+    const next = reducer(withExercise, { type: 'finishWorkout' });
+
+    expect(next.active).toBe(withExercise.active);
+    expect(next.workouts).toHaveLength(0);
+  });
+
   it('saves retroactive workouts with manual date and duration', () => {
     const started = reducer(seed(), {
       type: 'startWorkout',

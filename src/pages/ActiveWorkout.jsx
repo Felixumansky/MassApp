@@ -27,6 +27,7 @@ export default function ActiveWorkout() {
   const [rest, setRest] = useState({ open: false, seconds: 90 });
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [completed, setCompleted] = useState(null);
+  const [finishError, setFinishError] = useState('');
 
   const bestByExercise = useMemo(() => {
     const best = {};
@@ -81,6 +82,7 @@ export default function ActiveWorkout() {
 
   function toggleSet(exUid, set) {
     const next = !set.done;
+    setFinishError('');
     dispatch({ type: 'updateSet', uid: exUid, setId: set.id, patch: { done: next } });
     if (next) {
       vibrate(12);
@@ -134,11 +136,11 @@ export default function ActiveWorkout() {
   function finish() {
     const summary = buildSummary();
     setConfirmFinish(false);
-    dispatch({ type: 'finishWorkout' });
     if (summary.exerciseCount === 0) {
-      navigate('/');
+      setFinishError('כדי לשמור אימון צריך לסמן לפחות סט אחד כהושלם.');
       return;
     }
+    dispatch({ type: 'finishWorkout' });
     vibrate([10, 40, 10, 40, 20]);
     setCompleted(summary);
   }
@@ -170,6 +172,12 @@ export default function ActiveWorkout() {
           <Flag className="size-4" /> סיום
         </button>
       </div>
+
+      {finishError && (
+        <p className="fade-up mb-4 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-200">
+          {finishError}
+        </p>
+      )}
 
       {active.retroactive && <RetroWorkoutMeta active={active} dispatch={dispatch} />}
 

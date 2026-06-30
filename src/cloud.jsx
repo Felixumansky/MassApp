@@ -74,6 +74,7 @@ export function CloudProvider({ children }) {
   const [status, setStatus] = useState('idle'); // idle | syncing | synced | error
   const [error, setError] = useState('');
   const ready = useRef(false); // gate pushes until initial pull/push done
+  const [readyVersion, setReadyVersion] = useState(0);
   const pushTimer = useRef(null);
   const retryTimer = useRef(null);
   const latestSlice = useRef(null);
@@ -103,6 +104,11 @@ export function CloudProvider({ children }) {
   const sliceKey = JSON.stringify(slice);
   latestSlice.current = slice;
 
+  const markReady = useCallback(() => {
+    ready.current = true;
+    setReadyVersion((v) => v + 1);
+  }, []);
+
   // After auth, reconcile: pull server state, or seed it from local if empty.
   const reconcile = useCallback(
     async (token) => {
@@ -110,21 +116,22 @@ export function CloudProvider({ children }) {
       setError('');
       try {
         const { state: server, updatedAt } = await api.getState(token);
+        const local = latestSlice.current || slice;
         if (updatedAt && (server.workouts?.length || server.routines?.length || server.bodyWeights?.length || server.customExercises?.length)) {
-          const merged = mergeSyncedState(slice, server);
+          const merged = mergeSyncedState(local, server);
           dispatch({ type: 'replaceAll', data: merged });
           await api.putState(token, merged);
         } else {
-          await api.putState(token, slice);
+          await api.putState(token, local);
         }
-        ready.current = true;
+        markReady();
         setStatus('synced');
       } catch (e) {
         setStatus('error');
         setError(e.message);
       }
     },
-    [dispatch, slice]
+    [dispatch, markReady, slice]
   );
 
   async function login(email, password) {
@@ -165,10 +172,10 @@ export function CloudProvider({ children }) {
     setError('');
     try {
       await api.putState(auth.token, nextSlice);
-      ready.current = true;
+      markReady();
       setStatus('synced');
     } catch (e) {
-      ready.current = true;
+      markReady();
       setStatus('error');
       setError(e.message);
       throw e;
@@ -231,7 +238,7 @@ export function CloudProvider({ children }) {
       clearTimeout(pushTimer.current);
       clearTimeout(retryTimer.current);
     };
-  }, [sliceKey, auth?.token]);
+  }, [sliceKey, auth?.token, readyVersion]);
 
   const value = useMemo(
     () => ({

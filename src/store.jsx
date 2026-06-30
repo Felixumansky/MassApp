@@ -280,7 +280,7 @@ export function reducer(state, action) {
           .map((e) => ({ ...e, sets: e.sets.filter((s) => s.done && s.reps) }))
           .filter((e) => e.sets.length > 0),
       };
-      if (finished.exercises.length === 0) return { ...state, active: null };
+      if (finished.exercises.length === 0) return state;
       return {
         ...state,
         active: null,
