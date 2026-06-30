@@ -92,7 +92,7 @@ export default function ActiveWorkout() {
 
   function buildSummary() {
     const exs = active.exercises
-      .map((e) => ({ ...e, sets: e.sets.filter((s) => s.done && s.reps) }))
+      .map((e) => ({ ...e, sets: e.sets.filter((s) => s.done) }))
       .filter((e) => e.sets.length);
 
     const priorBest = {};

@@ -74,6 +74,31 @@ describe('store reducer', () => {
     expect(next.workouts).toHaveLength(0);
   });
 
+  it('saves a checked set even when reps are still blank', () => {
+    const started = reducer(seed(), { type: 'startWorkout' });
+    const withExercise = {
+      ...started,
+      active: {
+        ...started.active,
+        exercises: [
+          {
+            uid: 'ex-1',
+            exerciseId: 'bench-press',
+            name: 'לחיצת חזה במוט',
+            muscle: 'chest',
+            sets: [{ id: 's-1', reps: '', weight: '', rpe: '', done: true }],
+          },
+        ],
+      },
+    };
+
+    const next = reducer(withExercise, { type: 'finishWorkout' });
+
+    expect(next.active).toBeNull();
+    expect(next.workouts).toHaveLength(1);
+    expect(next.workouts[0].exercises[0].sets).toEqual([{ id: 's-1', reps: '', weight: '', rpe: '', done: true }]);
+  });
+
   it('saves retroactive workouts with manual date and duration', () => {
     const started = reducer(seed(), {
       type: 'startWorkout',

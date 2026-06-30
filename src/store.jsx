@@ -277,7 +277,7 @@ export function reducer(state, action) {
         name: state.active.name,
         durationSec,
         exercises: state.active.exercises
-          .map((e) => ({ ...e, sets: e.sets.filter((s) => s.done && s.reps) }))
+          .map((e) => ({ ...e, sets: e.sets.filter((s) => s.done) }))
           .filter((e) => e.sets.length > 0),
       };
       if (finished.exercises.length === 0) return state;
