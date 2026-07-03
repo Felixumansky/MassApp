@@ -316,6 +316,18 @@ export function reducer(state, action) {
         },
       };
 
+    case 'updateExercisePhoto':
+      if (!state.active) return state;
+      return {
+        ...state,
+        active: {
+          ...state.active,
+          exercises: state.active.exercises.map((e) =>
+            e.uid === action.uid ? { ...e, photo: action.photo || undefined } : e
+          ),
+        },
+      };
+
     case 'finishWorkout': {
       if (!state.active) return state;
       const durationSec = state.active.retroactive

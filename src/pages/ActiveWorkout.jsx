@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Plus, Trash2, X, Flag, Timer, Dumbbell, Copy, Sparkles, StickyNote, CalendarDays } from 'lucide-react';
+import { Check, Plus, Trash2, X, Flag, Timer, Dumbbell, Copy, Sparkles, StickyNote, CalendarDays, ChevronDown, Camera } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { GlassCard, MuscleTag, EmptyState, WeightInput, UnitToggle } from '../components/ui.jsx';
 import ExercisePicker from '../components/ExercisePicker.jsx';
 import RestTimer from '../components/RestTimer.jsx';
 import WorkoutComplete from '../components/WorkoutComplete.jsx';
-import { fmtDuration, workoutVolume, epley1rm, vibrate, unitLabel, fmtWeightBoth, dayKey, LB_PER_KG } from '../lib/utils.js';
+import { fmtDuration, workoutVolume, epley1rm, vibrate, unitLabel, fmtWeightBoth, dayKey, LB_PER_KG, compressImage } from '../lib/utils.js';
 import { lastSessionExercise, suggestNextSet } from '../lib/analytics.js';
 import { useDialogFocus } from '../lib/useDialogFocus.js';
 
@@ -286,6 +286,15 @@ const setGridClass = 'grid grid-cols-1 gap-2 sm:grid-cols-[1.7rem_minmax(0,1fr)_
 
 function ExerciseCard({ ex, unit, workouts, priorBest, onToggle, dispatch }) {
   const doneCount = ex.sets.filter((s) => s.done).length;
+  const allDone = ex.sets.length > 0 && doneCount === ex.sets.length;
+  const [collapsed, setCollapsed] = useState(allDone);
+  const [lightbox, setLightbox] = useState(false);
+  const fileRef = useRef(null);
+
+  useEffect(() => {
+    setCollapsed(allDone);
+  }, [allDone]);
+
   const overload = useMemo(() => {
     const last = lastSessionExercise(workouts, ex.exerciseId);
     if (!last) return null;
@@ -297,139 +306,248 @@ function ExerciseCard({ ex, unit, workouts, priorBest, onToggle, dispatch }) {
     return { top, suggestion };
   }, [workouts, ex.exerciseId, ex.targetReps, unit]);
 
+  async function pickPhoto(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const url = await compressImage(file);
+    if (url) dispatch({ type: 'updateExercisePhoto', uid: ex.uid, photo: url });
+  }
+
   return (
     <GlassCard className="min-w-0 overflow-hidden flex flex-col gap-3 p-3.5">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-2.5">
-          <span className="font-bold">{ex.name}</span>
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={!collapsed}
+        onClick={() => setCollapsed((c) => !c)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setCollapsed((c) => !c);
+          }
+        }}
+        className="flex cursor-pointer items-center justify-between gap-2"
+      >
+        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-2.5">
+          <span className="font-bold text-[var(--color-amber)]">{ex.name}</span>
           <MuscleTag muscle={ex.muscle} />
         </div>
-        <button
-          onClick={() => dispatch({ type: 'removeExercise', uid: ex.uid })}
-          className="press flex size-8 items-center justify-center self-end rounded-lg text-[var(--color-muted-foreground)] sm:self-auto"
-          aria-label="הסר תרגיל"
-        >
-          <Trash2 className="size-4" />
-        </button>
-      </div>
-
-      {overload && (
-        <p className="tnum -mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-[var(--color-muted-foreground)]">
-          <span>פעם קודמת: <span className="font-bold text-[var(--color-card-foreground)]">{overload.top.weight ? fmtWeightBoth(overload.top.weight, unit) : '—'} × {overload.top.reps}</span></span>
-          {overload.suggestion && (
-            <>
-              <span>·</span>
-              <span>יעד: <span className="font-bold" style={{ color: 'var(--color-volt)' }}>{overload.suggestion.weight ? fmtWeightBoth(overload.suggestion.weight, unit) : '—'} × {overload.suggestion.reps}</span></span>
-            </>
-          )}
-        </p>
-      )}
-
-      <div className={`${setGridClass} hidden text-[11px] font-semibold text-[var(--color-muted-foreground)] sm:grid`}>
-        <span className="text-center">סט</span>
-        <span className="text-center">חזרות</span>
-        <span className="text-center">משקל ({unitLabel(unit)})</span>
-        <span className="text-center">RPE</span>
-        <span className="text-center">{doneCount}/{ex.sets.length}</span>
-      </div>
-
-      {ex.sets.map((s, i) => (
-        <div key={s.id} className={`${setGridClass} rounded-xl border border-[var(--hairline)] bg-white/[0.025] p-2.5 sm:border-0 sm:bg-transparent sm:p-0`}>
-          <span className="flex items-center justify-between text-xs font-semibold text-[var(--color-muted-foreground)] sm:block sm:text-center">
-            <span className="sm:hidden">סט</span>
-            <span className="tnum text-sm font-bold">{i + 1}</span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className={`tnum flex items-center gap-1 text-xs font-bold ${allDone ? 'text-[var(--color-volt)]' : 'text-[var(--color-muted-foreground)]'}`}>
+            {allDone && <Check className="size-3.5" strokeWidth={3} />}
+            {doneCount}/{ex.sets.length}
           </span>
-          <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--color-muted-foreground)] sm:block">
-            <span className="sm:hidden">חזרות</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              value={s.reps}
-              onChange={(e) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { reps: e.target.value } })}
-              placeholder="—"
-              className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-base font-bold text-[var(--color-card-foreground)] outline-none focus:bg-white/10 sm:w-full"
-              aria-label={`חזרות סט ${i + 1}`}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--color-muted-foreground)] sm:block">
-            <span className="sm:hidden">משקל ({unitLabel(unit)})</span>
-            <WeightInput
-              kg={s.weight}
-              unit={unit}
-              onCommit={(kg) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { weight: kg } })}
-              placeholder="—"
-              className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-base font-bold text-[var(--color-card-foreground)] outline-none focus:bg-white/10 sm:w-full"
-              aria-label={`משקל סט ${i + 1}`}
-            />
-          </label>
-          <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--color-muted-foreground)] sm:block">
-            <span className="sm:hidden">RPE</span>
-            <input
-              type="number"
-              inputMode="decimal"
-              min="1"
-              max="10"
-              step="0.5"
-              value={s.rpe || ''}
-              onChange={(e) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { rpe: e.target.value } })}
-              placeholder="—"
-              className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-sm font-bold text-[var(--color-card-foreground)] outline-none focus:bg-white/10 sm:w-full"
-              aria-label={`RPE סט ${i + 1}`}
-            />
-          </label>
           <button
-            onClick={() => onToggle(ex.uid, s)}
-            className="press relative flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-colors sm:size-9 sm:w-auto sm:justify-self-center sm:p-0"
-            style={{
-              background: s.done ? 'var(--color-volt)' : 'rgba(255,255,255,0.06)',
-              color: s.done ? '#0a1500' : '#94a3b8',
+            onClick={(e) => {
+              e.stopPropagation();
+              dispatch({ type: 'removeExercise', uid: ex.uid });
             }}
-            aria-label={s.done ? 'בטל סימון סט' : 'סמן סט כהושלם'}
-            aria-pressed={s.done}
+            className="press flex size-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)]"
+            aria-label="הסר תרגיל"
           >
-            <Check className="size-4" strokeWidth={3} />
-            <span className="sm:hidden">{s.done ? 'הושלם' : 'סמן כהושלם'}</span>
-            {s.done && epley1rm(s.weight, s.reps) > priorBest && (
-              <Sparkles className="absolute -end-1 -top-1 size-3.5 text-[var(--color-amber)]" />
-            )}
+            <Trash2 className="size-4" />
           </button>
+          <ChevronDown className={`size-4 text-[var(--color-muted-foreground)] transition-transform ${collapsed ? '' : 'rotate-180'}`} />
         </div>
-      ))}
-
-      <label className="flex items-start gap-2 rounded-xl bg-white/[0.035] px-3 py-2 text-xs text-[var(--color-muted-foreground)]">
-        <StickyNote className="mt-0.5 size-4 shrink-0" />
-        <textarea
-          value={ex.note || ''}
-          onChange={(e) => dispatch({ type: 'updateExerciseNote', uid: ex.uid, note: e.target.value })}
-          placeholder="הערה לתרגיל"
-          rows={1}
-          className="min-h-6 flex-1 resize-none bg-transparent text-sm font-semibold text-[var(--color-card-foreground)] outline-none placeholder:font-normal placeholder:text-[var(--color-muted-foreground)]"
-        />
-      </label>
-
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <button
-          onClick={() => dispatch({ type: 'addSet', uid: ex.uid })}
-          className="press flex-1 rounded-xl bg-white/5 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
-        >
-          + סט
-        </button>
-        <button
-          onClick={() => dispatch({ type: 'duplicateSet', uid: ex.uid, setId: ex.sets.at(-1).id })}
-          className="press flex items-center justify-center gap-1 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
-        >
-          <Copy className="size-3.5" /> שכפל
-        </button>
-        {ex.sets.length > 1 && (
-          <button
-            onClick={() => dispatch({ type: 'removeSet', uid: ex.uid, setId: ex.sets.at(-1).id })}
-            className="press rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
-          >
-            − סט
-          </button>
-        )}
       </div>
+
+      <AnimatePresence initial={false}>
+        {!collapsed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="flex flex-col gap-3 overflow-hidden"
+          >
+            {overload && (
+              <p className="tnum -mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-[var(--color-muted-foreground)]">
+                <span>פעם קודמת: <span className="font-bold text-[var(--color-card-foreground)]">{overload.top.weight ? fmtWeightBoth(overload.top.weight, unit) : '—'} × {overload.top.reps}</span></span>
+                {overload.suggestion && (
+                  <>
+                    <span>·</span>
+                    <span>יעד: <span className="font-bold" style={{ color: 'var(--color-volt)' }}>{overload.suggestion.weight ? fmtWeightBoth(overload.suggestion.weight, unit) : '—'} × {overload.suggestion.reps}</span></span>
+                  </>
+                )}
+              </p>
+            )}
+
+            <div className={`${setGridClass} hidden text-[11px] font-semibold text-[var(--color-muted-foreground)] sm:grid`}>
+              <span className="text-center">סט</span>
+              <span className="text-center">חזרות</span>
+              <span className="text-center">משקל ({unitLabel(unit)})</span>
+              <span className="text-center">RPE</span>
+              <span className="text-center">{doneCount}/{ex.sets.length}</span>
+            </div>
+
+            {ex.sets.map((s, i) => (
+              <div key={s.id} className={`${setGridClass} rounded-xl border border-[var(--hairline)] bg-white/[0.025] p-2.5 sm:border-0 sm:bg-transparent sm:p-0`}>
+                <span className="flex items-center justify-between text-xs font-semibold text-[var(--color-muted-foreground)] sm:block sm:text-center">
+                  <span className="sm:hidden">סט</span>
+                  <span className="tnum text-sm font-bold">{i + 1}</span>
+                </span>
+                <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--color-muted-foreground)] sm:block">
+                  <span className="sm:hidden">חזרות</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={s.reps}
+                    onChange={(e) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { reps: e.target.value } })}
+                    placeholder="—"
+                    className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-base font-bold text-[var(--color-card-foreground)] outline-none focus:bg-white/10 sm:w-full"
+                    aria-label={`חזרות סט ${i + 1}`}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--color-muted-foreground)] sm:block">
+                  <span className="sm:hidden">משקל ({unitLabel(unit)})</span>
+                  <WeightInput
+                    kg={s.weight}
+                    unit={unit}
+                    onCommit={(kg) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { weight: kg } })}
+                    placeholder="—"
+                    className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-base font-bold text-[var(--color-card-foreground)] outline-none focus:bg-white/10 sm:w-full"
+                    aria-label={`משקל סט ${i + 1}`}
+                  />
+                </label>
+                <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--color-muted-foreground)] sm:block">
+                  <span className="sm:hidden">RPE</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min="1"
+                    max="10"
+                    step="0.5"
+                    value={s.rpe || ''}
+                    onChange={(e) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { rpe: e.target.value } })}
+                    placeholder="—"
+                    className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-sm font-bold text-[var(--color-card-foreground)] outline-none focus:bg-white/10 sm:w-full"
+                    aria-label={`RPE סט ${i + 1}`}
+                  />
+                </label>
+                <button
+                  onClick={() => onToggle(ex.uid, s)}
+                  className="press relative flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-colors sm:size-9 sm:w-auto sm:justify-self-center sm:p-0"
+                  style={{
+                    background: s.done ? 'var(--color-volt)' : 'rgba(255,255,255,0.06)',
+                    color: s.done ? '#0a1500' : '#94a3b8',
+                  }}
+                  aria-label={s.done ? 'בטל סימון סט' : 'סמן סט כהושלם'}
+                  aria-pressed={s.done}
+                >
+                  <Check className="size-4" strokeWidth={3} />
+                  <span className="sm:hidden">{s.done ? 'הושלם' : 'סמן כהושלם'}</span>
+                  {s.done && epley1rm(s.weight, s.reps) > priorBest && (
+                    <Sparkles className="absolute -end-1 -top-1 size-3.5 text-[var(--color-amber)]" />
+                  )}
+                </button>
+              </div>
+            ))}
+
+            {ex.photo && (
+              <div className="relative self-start">
+                <button
+                  onClick={() => setLightbox(true)}
+                  className="press block overflow-hidden rounded-xl border border-[var(--hairline)]"
+                  aria-label="הגדל תמונה"
+                >
+                  <img src={ex.photo} alt={`תמונה — ${ex.name}`} className="size-16 object-cover" />
+                </button>
+                <button
+                  onClick={() => dispatch({ type: 'updateExercisePhoto', uid: ex.uid, photo: null })}
+                  className="press absolute -end-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-black/70 text-white"
+                  aria-label="הסר תמונה"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            )}
+
+            <label className="flex items-start gap-2 rounded-xl bg-white/[0.035] px-3 py-2 text-xs text-[var(--color-muted-foreground)]">
+              <StickyNote className="mt-0.5 size-4 shrink-0" />
+              <textarea
+                value={ex.note || ''}
+                onChange={(e) => dispatch({ type: 'updateExerciseNote', uid: ex.uid, note: e.target.value })}
+                placeholder="הערה לתרגיל"
+                rows={1}
+                className="min-h-6 flex-1 resize-none bg-transparent text-sm font-semibold text-[var(--color-card-foreground)] outline-none placeholder:font-normal placeholder:text-[var(--color-muted-foreground)]"
+              />
+            </label>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button
+                onClick={() => dispatch({ type: 'addSet', uid: ex.uid })}
+                className="press flex-1 rounded-xl bg-white/5 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
+              >
+                + סט
+              </button>
+              <button
+                onClick={() => dispatch({ type: 'duplicateSet', uid: ex.uid, setId: ex.sets.at(-1).id })}
+                className="press flex items-center justify-center gap-1 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
+              >
+                <Copy className="size-3.5" /> שכפל
+              </button>
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="press flex items-center justify-center gap-1 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
+              >
+                <Camera className="size-3.5" /> תמונה
+              </button>
+              {ex.sets.length > 1 && (
+                <button
+                  onClick={() => dispatch({ type: 'removeSet', uid: ex.uid, setId: ex.sets.at(-1).id })}
+                  className="press rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
+                >
+                  − סט
+                </button>
+              )}
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pickPhoto} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <PhotoLightbox open={lightbox} src={ex.photo} name={ex.name} onClose={() => setLightbox(false)} />
     </GlassCard>
+  );
+}
+
+function PhotoLightbox({ open, src, name, onClose }) {
+  const dialogRef = useDialogFocus(open, onClose);
+  return (
+    <AnimatePresence>
+      {open && src && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={onClose}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`תמונה — ${name}`}
+        >
+          <div ref={dialogRef} className="contents">
+            <button
+              onClick={onClose}
+              className="press absolute end-4 top-4 flex size-10 items-center justify-center rounded-xl bg-white/10 text-white"
+              aria-label="סגור תמונה"
+            >
+              <X className="size-5" />
+            </button>
+            <motion.img
+              initial={{ scale: 0.92 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              src={src}
+              alt={`תמונה — ${name}`}
+              className="max-h-[85dvh] w-full max-w-2xl rounded-2xl object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

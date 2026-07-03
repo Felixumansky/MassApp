@@ -55,7 +55,7 @@ export default function Library() {
         />
       </label>
 
-      <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1">
+      <div className="-mx-4 mb-4 flex flex-wrap gap-2 px-4 pb-1">
         <Chip active={muscle === 'all'} onClick={() => setMuscle('all')} label="הכל" />
         {MUSCLES.map((m) => (
           <Chip key={m.id} active={muscle === m.id} onClick={() => setMuscle(m.id)} label={m.label} color={m.color} />

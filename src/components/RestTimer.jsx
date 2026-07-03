@@ -21,7 +21,7 @@ export default function RestTimer({ open, seconds, onClose, onChangeSeconds }) {
       setRemaining((r) => {
         if (r <= 1) {
           clearInterval(tick.current);
-          vibrate([120, 60, 120]);
+          vibrate([900, 80, 900, 80, 900]);
           return 0;
         }
         return r - 1;
