@@ -53,14 +53,15 @@ export const DEFAULT_GYM_AUTO_START = {
 function profileDefaults() {
   return {
     name: '',
-    unit: 'kg',
+    unit: 'lb',
+    unitMigratedLb: true,
     weeklyGoal: 4,
     gymAutoStart: DEFAULT_GYM_AUTO_START,
   };
 }
 
 function normalizeProfile(profile = {}) {
-  return {
+  const p = {
     ...profileDefaults(),
     ...profile,
     gymAutoStart: {
@@ -68,6 +69,13 @@ function normalizeProfile(profile = {}) {
       ...(profile.gymAutoStart || {}),
     },
   };
+  // One-time switch of pre-existing profiles to lb entry (gym plates are in
+  // pounds); afterwards the user's own toggle choice is respected.
+  if (!p.unitMigratedLb) {
+    p.unit = 'lb';
+    p.unitMigratedLb = true;
+  }
+  return p;
 }
 
 export function seed() {

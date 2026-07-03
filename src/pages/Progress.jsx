@@ -4,7 +4,7 @@ import { Trophy, Dumbbell, Layers, Scale, ChevronLeft, Activity, Flame } from 'l
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, EmptyState, AppLoader } from '../components/ui.jsx';
 import WorkoutHistoryList from '../components/WorkoutHistory.jsx';
-import { workoutVolume, epley1rm, shortDateHe, dayKey, toUnit, fmtWeight, unitLabel } from '../lib/utils.js';
+import { workoutVolume, epley1rm, shortDateHe, dayKey, toUnit, fmtWeight, fmtWeightBoth, unitLabel, otherUnit } from '../lib/utils.js';
 import { MUSCLES, muscleById } from '../lib/exercises.js';
 import { setsByMuscle, muscleSetStatus, HYPERTROPHY_MIN, HYPERTROPHY_MAX, hasAnyRpe, weeklyRpeStats } from '../lib/analytics.js';
 
@@ -51,7 +51,7 @@ export default function Progress() {
       const vol = workouts
         .filter((w) => w.date >= startKey && w.date <= endKey)
         .reduce((s, w) => s + volOf(w), 0);
-      buckets.push({ label: shortDateHe(endKey), volume: Math.round(toUnit(vol, unit)) });
+      buckets.push({ label: shortDateHe(endKey), volume: Math.round(toUnit(vol, unit)), kg: vol });
     }
     return buckets;
   }, [workouts, volExId, unit]);
@@ -112,8 +112,11 @@ export default function Progress() {
           </p>
         </div>
         {latestWeight && (
-          <span className="tnum text-lg font-extrabold" style={{ color: 'var(--color-cyan)' }}>
-            {fmtWeight(latestWeight.weight, unit)}<span className="text-xs text-[var(--color-muted-foreground)]"> {unitLabel(unit)}</span>
+          <span className="flex flex-col items-end">
+            <span className="tnum text-lg font-extrabold leading-tight" style={{ color: 'var(--color-cyan)' }}>
+              {fmtWeight(latestWeight.weight, 'kg')}<span className="text-xs text-[var(--color-muted-foreground)]"> ק״ג</span>
+            </span>
+            <span className="tnum text-[10px] font-semibold text-[var(--color-muted-foreground)]">{fmtWeight(latestWeight.weight, 'lb')} lb</span>
           </span>
         )}
         <ChevronLeft className="size-5 text-[var(--color-muted-foreground)]" />
@@ -150,7 +153,10 @@ export default function Progress() {
             <Layers className="size-5" style={{ color: 'var(--color-cyan)' }} />
           </span>
           <div>
-            <p className="tnum text-2xl font-extrabold leading-none">{(toUnit(totals.volume, unit) / 1000).toFixed(1)}<span className="text-sm">{unit === 'lb' ? 'K' : 'ט׳'}</span></p>
+            <p className="tnum text-2xl font-extrabold leading-none">{(toUnit(totals.volume, unit) / 1000).toFixed(1)}<span className="text-sm">{unit === 'lb' ? 'K lb' : 'ט׳'}</span></p>
+            <p className="tnum text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+              {(toUnit(totals.volume, otherUnit(unit)) / 1000).toFixed(1)} {otherUnit(unit) === 'lb' ? 'K lb' : 'ט׳'}
+            </p>
             <p className="text-xs text-[var(--color-muted-foreground)]">נפח כולל</p>
           </div>
         </GlassCard>
@@ -235,9 +241,12 @@ export default function Progress() {
                   <span className="size-2.5 rounded-full" style={{ background: m.color }} />
                   <div className="flex-1">
                     <p className="text-sm font-bold">{p.name}</p>
-                    <p className="tnum text-xs text-[var(--color-muted-foreground)]">{fmtWeight(p.weight, unit)} {unitLabel(unit)} × {p.reps}</p>
+                    <p className="tnum text-xs text-[var(--color-muted-foreground)]">{fmtWeightBoth(p.weight, unit)} × {p.reps}</p>
                   </div>
-                  <span className="tnum text-lg font-extrabold" style={{ color: m.color }}>{fmtWeight(p.e1, unit)}<span className="text-xs"> {unitLabel(unit)}</span></span>
+                  <span className="flex flex-col items-end">
+                    <span className="tnum text-lg font-extrabold leading-tight" style={{ color: m.color }}>{fmtWeight(p.e1, unit)}<span className="text-xs"> {unitLabel(unit)}</span></span>
+                    <span className="tnum text-[10px] font-semibold text-[var(--color-muted-foreground)]">{fmtWeight(p.e1, otherUnit(unit))} {unitLabel(otherUnit(unit))}</span>
+                  </span>
                 </GlassCard>
               </li>
             );

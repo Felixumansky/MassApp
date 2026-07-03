@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Plus, Trash2, X, Flag, Timer, Dumbbell, Copy, Sparkles, StickyNote, CalendarDays } from 'lucide-react';
 import { useStore } from '../store.jsx';
-import { GlassCard, MuscleTag, EmptyState, WeightInput } from '../components/ui.jsx';
+import { GlassCard, MuscleTag, EmptyState, WeightInput, UnitToggle } from '../components/ui.jsx';
 import ExercisePicker from '../components/ExercisePicker.jsx';
 import RestTimer from '../components/RestTimer.jsx';
 import WorkoutComplete from '../components/WorkoutComplete.jsx';
-import { fmtDuration, workoutVolume, epley1rm, vibrate, unitLabel, fmtWeight, dayKey } from '../lib/utils.js';
+import { fmtDuration, workoutVolume, epley1rm, vibrate, unitLabel, fmtWeightBoth, dayKey, LB_PER_KG } from '../lib/utils.js';
 import { lastSessionExercise, suggestNextSet } from '../lib/analytics.js';
 import { useDialogFocus } from '../lib/useDialogFocus.js';
 
@@ -174,6 +174,11 @@ export default function ActiveWorkout() {
         </button>
       </div>
 
+      <div className="fade-up mb-4 flex items-center justify-end gap-2 text-xs font-semibold text-[var(--color-muted-foreground)]">
+        יחידת הזנה
+        <UnitToggle unit={unit} onChange={(u) => { vibrate(5); dispatch({ type: 'profile', patch: { unit: u } }); }} />
+      </div>
+
       {finishError && (
         <p className="fade-up mb-4 rounded-xl border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-sm font-semibold text-amber-200">
           {finishError}
@@ -212,7 +217,7 @@ export default function ActiveWorkout() {
 
       {active.exercises.length > 0 && (
         <p className="tnum mt-3 text-center text-xs text-[var(--color-muted-foreground)]">
-          נפח נוכחי: {fmtWeight(totalVolume, unit).toLocaleString()} {unitLabel(unit)}
+          נפח נוכחי: {fmtWeightBoth(totalVolume, unit)}
         </p>
       )}
 
@@ -287,9 +292,10 @@ function ExerciseCard({ ex, unit, workouts, priorBest, onToggle, dispatch }) {
     const done = (last.sets || []).filter((s) => Number(s.reps) > 0);
     if (!done.length) return null;
     const top = done.reduce((a, b) => (epley1rm(b.weight, b.reps) > epley1rm(a.weight, a.reps) ? b : a));
-    const suggestion = suggestNextSet(last, ex.targetReps);
+    // Progression step: 2.5 kg, or a plate-friendly 5 lb when entering in pounds.
+    const suggestion = suggestNextSet(last, ex.targetReps, unit === 'lb' ? 5 / LB_PER_KG : 2.5);
     return { top, suggestion };
-  }, [workouts, ex.exerciseId, ex.targetReps]);
+  }, [workouts, ex.exerciseId, ex.targetReps, unit]);
 
   return (
     <GlassCard className="min-w-0 overflow-hidden flex flex-col gap-3 p-3.5">
@@ -309,11 +315,11 @@ function ExerciseCard({ ex, unit, workouts, priorBest, onToggle, dispatch }) {
 
       {overload && (
         <p className="tnum -mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-[var(--color-muted-foreground)]">
-          <span>פעם קודמת: <span className="font-bold text-[var(--color-card-foreground)]">{fmtWeight(overload.top.weight, unit) || '—'}{overload.top.weight ? ` ${unitLabel(unit)}` : ''} × {overload.top.reps}</span></span>
+          <span>פעם קודמת: <span className="font-bold text-[var(--color-card-foreground)]">{overload.top.weight ? fmtWeightBoth(overload.top.weight, unit) : '—'} × {overload.top.reps}</span></span>
           {overload.suggestion && (
             <>
               <span>·</span>
-              <span>יעד: <span className="font-bold" style={{ color: 'var(--color-volt)' }}>{fmtWeight(overload.suggestion.weight, unit) || '—'}{overload.suggestion.weight ? ` ${unitLabel(unit)}` : ''} × {overload.suggestion.reps}</span></span>
+              <span>יעד: <span className="font-bold" style={{ color: 'var(--color-volt)' }}>{overload.suggestion.weight ? fmtWeightBoth(overload.suggestion.weight, unit) : '—'} × {overload.suggestion.reps}</span></span>
             </>
           )}
         </p>

@@ -10,7 +10,7 @@ import {
   CartesianGrid,
   Cell,
 } from 'recharts';
-import { unitLabel } from '../lib/utils.js';
+import { unitLabel, weightParts } from '../lib/utils.js';
 
 export function VolumeChart({ data, unit }) {
   return (
@@ -111,20 +111,44 @@ function RpeTip({ active, payload }) {
   );
 }
 
+/* Tooltips show both units when the datapoint carries its raw `kg` value;
+   otherwise fall back to the chart's display unit. */
 function VolTip({ active, payload, unit }) {
   if (!active || !payload?.length) return null;
+  const kg = payload[0].payload.kg;
+  if (kg == null) {
+    return (
+      <div className="glass glass-strong rounded-xl px-3 py-2 text-xs">
+        <p className="tnum font-bold">{payload[0].value.toLocaleString()} {unitLabel(unit)}</p>
+      </div>
+    );
+  }
+  const p = weightParts(kg);
+  const primaryKg = unit !== 'lb';
   return (
     <div className="glass glass-strong rounded-xl px-3 py-2 text-xs">
-      <p className="tnum font-bold">{payload[0].value.toLocaleString()} {unitLabel(unit)}</p>
+      <p className="tnum font-bold">{primaryKg ? `${p.kg.toLocaleString()} ק״ג` : `${p.lb.toLocaleString()} lb`}</p>
+      <p className="tnum text-[var(--color-muted-foreground)]">{primaryKg ? `${p.lb.toLocaleString()} lb` : `${p.kg.toLocaleString()} ק״ג`}</p>
     </div>
   );
 }
 
 function WeightTip({ active, payload, unit }) {
   if (!active || !payload?.length) return null;
+  const kg = payload[0].payload.kg;
+  if (kg == null) {
+    return (
+      <div className="glass glass-strong rounded-xl px-3 py-2 text-xs">
+        <p className="tnum font-bold">{payload[0].value} {unitLabel(unit)}</p>
+      </div>
+    );
+  }
+  const p = weightParts(kg);
+  const primaryKg = unit !== 'lb';
   return (
     <div className="glass glass-strong rounded-xl px-3 py-2 text-xs">
-      <p className="tnum font-bold">{payload[0].value} {unitLabel(unit)}</p>
+      <p className="tnum font-bold">{primaryKg ? `${p.kg} ק״ג` : `${p.lb} lb`}</p>
+      <p className="tnum text-[var(--color-muted-foreground)]">{primaryKg ? `${p.lb} lb` : `${p.kg} ק״ג`}</p>
     </div>
   );
 }

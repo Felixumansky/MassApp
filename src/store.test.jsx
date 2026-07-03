@@ -293,10 +293,10 @@ describe('store reducer', () => {
   });
 
   it('resets app data to the starter seed', () => {
-    const state = { ...seed(), workouts: [{ id: 'w-1' }], profile: { name: 'Dev', unit: 'lb', weeklyGoal: 5 } };
+    const state = { ...seed(), workouts: [{ id: 'w-1' }], profile: { name: 'Dev', unit: 'kg', weeklyGoal: 5 } };
     const next = reducer(state, { type: 'resetAll' });
     expect(next.workouts).toEqual([]);
-    expect(next.profile.unit).toBe('kg');
+    expect(next.profile.unit).toBe('lb');
     expect(next.profile.gymAutoStart.enabled).toBe(false);
   });
 

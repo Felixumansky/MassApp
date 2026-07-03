@@ -9,8 +9,7 @@ import {
   fmtDuration,
   dayKey,
   formatDateHe,
-  fmtWeight,
-  unitLabel,
+  fmtWeightBoth,
   vibrate,
 } from '../lib/utils.js';
 import { useDialogFocus } from '../lib/useDialogFocus.js';
@@ -90,7 +89,7 @@ function WorkoutRow({ workout: w, unit, onEdit, onDelete }) {
       )}
       <div className="tnum flex gap-4 text-xs text-[var(--color-muted-foreground)]">
         <span>{workoutSetCount(w)} סטים</span>
-        <span>{fmtWeight(workoutVolume(w), unit).toLocaleString()} {unitLabel(unit)} נפח</span>
+        <span>{fmtWeightBoth(workoutVolume(w), unit)} נפח</span>
       </div>
     </GlassCard>
   );

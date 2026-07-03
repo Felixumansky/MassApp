@@ -99,21 +99,24 @@ export default function Profile() {
 
         <div className="h-px bg-white/8" />
 
-        <Field icon={Zap} label="יחידות משקל">
-          <div className="flex items-center gap-2">
-            {[['kg', 'ק״ג'], ['lb', 'lb']].map(([v, label]) => (
-              <button
-                key={v}
-                onClick={() => dispatch({ type: 'profile', patch: { unit: v } })}
-                className="press rounded-xl px-3.5 py-1.5 text-sm font-bold"
-                style={{
-                  background: profile.unit === v ? 'var(--color-volt)' : 'rgba(255,255,255,0.06)',
-                  color: profile.unit === v ? '#0a1500' : '#94a3b8',
-                }}
-              >
-                {label}
-              </button>
-            ))}
+        <Field icon={Zap} label="יחידת הזנה במכון">
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2">
+              {[['kg', 'ק״ג'], ['lb', 'lb']].map(([v, label]) => (
+                <button
+                  key={v}
+                  onClick={() => dispatch({ type: 'profile', patch: { unit: v } })}
+                  className="press rounded-xl px-3.5 py-1.5 text-sm font-bold"
+                  style={{
+                    background: profile.unit === v ? 'var(--color-volt)' : 'rgba(255,255,255,0.06)',
+                    color: profile.unit === v ? '#0a1500' : '#94a3b8',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-[var(--color-muted-foreground)]">התצוגה תמיד מציגה גם ליברות וגם ק״ג</p>
           </div>
         </Field>
       </GlassCard>

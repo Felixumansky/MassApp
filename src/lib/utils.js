@@ -65,6 +65,24 @@ export function fmtWeight(kg, unit) {
   return Math.round(Number(n) * 10) / 10;
 }
 
+/** The opposite display unit. */
+export function otherUnit(unit) {
+  return unit === 'lb' ? 'kg' : 'lb';
+}
+
+/** kg → { kg, lb } both rounded to 1 decimal, for custom big/small layouts. */
+export function weightParts(kg) {
+  return { kg: fmtWeight(kg, 'kg'), lb: fmtWeight(kg, 'lb') };
+}
+
+/** kg → "135 lb / 61.2 ק״ג" — always both units, primary first. */
+export function fmtWeightBoth(kg, primary = 'kg') {
+  const n = Number(kg);
+  if (kg === '' || kg == null || Number.isNaN(n)) return '—';
+  const secondary = otherUnit(primary);
+  return `${fmtWeight(kg, primary).toLocaleString()} ${unitLabel(primary)} / ${fmtWeight(kg, secondary).toLocaleString()} ${unitLabel(secondary)}`;
+}
+
 /** Total volume (kg) of a workout = Σ reps × weight over completed sets. */
 export function workoutVolume(workout) {
   let v = 0;

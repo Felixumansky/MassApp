@@ -1,28 +1,62 @@
 import { useState } from 'react';
-import { cn, fmtWeight, toKg } from '../lib/utils.js';
+import { cn, fmtWeight, toKg, unitLabel, otherUnit } from '../lib/utils.js';
 import { muscleById } from '../lib/exercises.js';
 
 /**
  * Weight input that displays/accepts values in the user's chosen unit while
  * committing kg (canonical) to the store. Keeps a local draft string while
  * focused so decimals/partial input ("60.") aren't mangled by conversion.
+ * Shows the equivalent in the other unit under the field so lb/kg are always
+ * both visible.
  */
 export function WeightInput({ kg, unit, onCommit, className, ...rest }) {
   const [draft, setDraft] = useState(null); // null = not editing
   const stored = kg === '' || kg == null ? '' : String(fmtWeight(kg, unit));
   const value = draft ?? stored;
+  const other = otherUnit(unit);
+  const otherVal = value === '' ? '' : fmtWeight(toKg(value, unit), other);
   return (
-    <input
-      type="number"
-      inputMode="decimal"
-      step="0.5"
-      value={value}
-      onFocus={() => setDraft(stored)}
-      onChange={(e) => { setDraft(e.target.value); onCommit(toKg(e.target.value, unit)); }}
-      onBlur={() => setDraft(null)}
-      className={className}
-      {...rest}
-    />
+    <span className="flex min-w-0 flex-col gap-0.5">
+      <input
+        type="number"
+        inputMode="decimal"
+        step="0.5"
+        value={value}
+        onFocus={() => setDraft(stored)}
+        onChange={(e) => { setDraft(e.target.value); onCommit(toKg(e.target.value, unit)); }}
+        onBlur={() => setDraft(null)}
+        className={className}
+        {...rest}
+      />
+      {otherVal !== '' && (
+        <span className="tnum text-center text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+          ≈ {otherVal} {unitLabel(other)}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** kg/lb segmented toggle for choosing the entry (primary) unit. */
+export function UnitToggle({ unit, onChange, className }) {
+  return (
+    <span className={cn('flex overflow-hidden rounded-lg border border-[var(--hairline)]', className)}>
+      {['kg', 'lb'].map((u) => (
+        <button
+          key={u}
+          type="button"
+          onClick={() => onChange(u)}
+          className="press px-2.5 py-1 text-xs font-bold"
+          style={{
+            background: unit === u ? 'var(--color-volt)' : 'rgba(255,255,255,0.04)',
+            color: unit === u ? '#0a1500' : '#94a3b8',
+          }}
+          aria-pressed={unit === u}
+        >
+          {unitLabel(u)}
+        </button>
+      ))}
+    </span>
   );
 }
 

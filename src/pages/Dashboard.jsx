@@ -7,7 +7,7 @@ import { PageHeader, GlassCard } from '../components/ui.jsx';
 import WorkoutHistoryList from '../components/WorkoutHistory.jsx';
 import RetroWorkoutSheet from '../components/RetroWorkoutSheet.jsx';
 import StartWorkoutSheet from '../components/StartWorkoutSheet.jsx';
-import { workoutVolume, dayKey, fmtWeight, unitLabel } from '../lib/utils.js';
+import { workoutVolume, dayKey, fmtWeight, unitLabel, otherUnit } from '../lib/utils.js';
 
 function greeting() {
   const h = new Date().getHours();
@@ -116,7 +116,12 @@ export default function Dashboard() {
 
       <section className="mb-5 grid grid-cols-3 gap-3" style={{ '--d': '0.05s' }}>
         <Stat icon={Dumbbell} color="var(--color-volt)" value={`${stats.weekCount}/${profile.weeklyGoal}`} label="השבוע" />
-        <Stat icon={Layers} color="var(--color-cyan)" value={fmtWeight(stats.weekVolume, unit).toLocaleString()} label={`${unitLabel(unit)} נפח`} />
+        <Stat
+          icon={Layers}
+          color="var(--color-cyan)"
+          value={fmtWeight(stats.weekVolume, unit).toLocaleString()}
+          label={`${unitLabel(unit)} נפח · ${fmtWeight(stats.weekVolume, otherUnit(unit)).toLocaleString()} ${unitLabel(otherUnit(unit))}`}
+        />
         <Stat icon={Flame} color="var(--color-amber)" value={stats.streak} label="רצף ימים" />
       </section>
 

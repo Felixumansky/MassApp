@@ -4,7 +4,7 @@ import { X, Dumbbell, TrendingUp, AlertTriangle } from 'lucide-react';
 import { muscleById } from '../lib/exercises.js';
 import { exerciseMediaUrl } from '../lib/api.js';
 import { exerciseE1rmSeries, detectPlateau } from '../lib/analytics.js';
-import { fmtWeight, unitLabel, shortDateHe } from '../lib/utils.js';
+import { fmtWeight, fmtWeightBoth, shortDateHe } from '../lib/utils.js';
 import { MuscleTag, AppLoader } from './ui.jsx';
 import { useDialogFocus } from '../lib/useDialogFocus.js';
 
@@ -36,7 +36,7 @@ export default function ExerciseDetail({ exercise, workouts = [], unit = 'kg', o
     [workouts, exercise]
   );
   const chartData = useMemo(
-    () => series.map((p) => ({ label: shortDateHe(p.date), value: fmtWeight(p.e1rm, unit) })),
+    () => series.map((p) => ({ label: shortDateHe(p.date), value: fmtWeight(p.e1rm, unit), kg: p.e1rm })),
     [series, unit]
   );
   const plateau = useMemo(() => detectPlateau(series), [series]);
@@ -120,7 +120,7 @@ export default function ExerciseDetail({ exercise, workouts = [], unit = 'kg', o
                       <TrendingUp className="size-4 text-[var(--color-volt)]" /> התקדמות
                     </h3>
                     <span className="tnum text-xs text-[var(--color-muted-foreground)]">
-                      שיא 1RM {fmtWeight(bestE1rm, unit)} {unitLabel(unit)}
+                      שיא 1RM {fmtWeightBoth(bestE1rm, unit)}
                     </span>
                   </div>
                   <Suspense fallback={<AppLoader label="טוען גרף…" />}>
