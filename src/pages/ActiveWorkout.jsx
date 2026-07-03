@@ -22,6 +22,11 @@ export default function ActiveWorkout() {
   const navigate = useNavigate();
   const active = state.active;
   const unit = state.profile.unit || 'kg';
+  const exerciseUnits = state.profile.exerciseUnits || {};
+
+  function setExerciseUnit(exerciseId, u) {
+    dispatch({ type: 'profile', patch: { exerciseUnits: { ...exerciseUnits, [exerciseId]: u } } });
+  }
 
   const [picker, setPicker] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -29,6 +34,13 @@ export default function ActiveWorkout() {
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [completed, setCompleted] = useState(null);
   const [finishError, setFinishError] = useState('');
+
+  // Exercises present when the workout was first shown start collapsed;
+  // ones added mid-session open expanded so they're ready to fill in.
+  const initialUidsRef = useRef({ workoutId: null, uids: null });
+  if (active && initialUidsRef.current.workoutId !== active.id) {
+    initialUidsRef.current = { workoutId: active.id, uids: new Set(active.exercises.map((e) => e.uid)) };
+  }
 
   const bestByExercise = useMemo(() => {
     const best = {};
@@ -175,7 +187,7 @@ export default function ActiveWorkout() {
       </div>
 
       <div className="fade-up mb-4 flex items-center justify-end gap-2 text-xs font-semibold text-[var(--color-muted-foreground)]">
-        יחידת הזנה
+        יחידת ברירת מחדל
         <UnitToggle unit={unit} onChange={(u) => { vibrate(5); dispatch({ type: 'profile', patch: { unit: u } }); }} />
       </div>
 
@@ -201,7 +213,16 @@ export default function ActiveWorkout() {
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ type: 'spring', stiffness: 320, damping: 30 }}
               >
-                <ExerciseCard ex={ex} unit={unit} workouts={state.workouts} priorBest={bestByExercise[ex.exerciseId] || 0} onToggle={toggleSet} dispatch={dispatch} />
+                <ExerciseCard
+                  ex={ex}
+                  unit={exerciseUnits[ex.exerciseId] || unit}
+                  onUnitChange={(u) => setExerciseUnit(ex.exerciseId, u)}
+                  workouts={state.workouts}
+                  priorBest={bestByExercise[ex.exerciseId] || 0}
+                  onToggle={toggleSet}
+                  dispatch={dispatch}
+                  defaultCollapsed={initialUidsRef.current.uids?.has(ex.uid) ?? true}
+                />
               </motion.li>
             ))}
           </AnimatePresence>
@@ -249,6 +270,16 @@ function RetroWorkoutMeta({ active, dispatch }) {
 
   return (
     <GlassCard className="mb-4 grid grid-cols-1 gap-3 p-3.5 sm:grid-cols-2">
+      <label className="flex flex-col gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)] sm:col-span-2">
+        שם אימון
+        <input
+          value={active.name}
+          onChange={(e) => dispatch({ type: 'updateActiveMeta', name: e.target.value })}
+          placeholder="שם האימון"
+          className="rounded-xl bg-white/[0.04] px-3 py-2.5 text-sm font-bold text-[var(--color-card-foreground)] outline-none placeholder:font-normal placeholder:text-[var(--color-muted-foreground)]"
+          aria-label="שם אימון"
+        />
+      </label>
       <label className="flex flex-col gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
         תאריך
         <span className="flex items-center gap-2 rounded-xl bg-white/[0.04] px-3 py-2.5">
@@ -284,14 +315,19 @@ function RetroWorkoutMeta({ active, dispatch }) {
 
 const setGridClass = 'grid grid-cols-1 gap-2 sm:grid-cols-[1.7rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_2.2rem] sm:items-center sm:gap-1.5';
 
-function ExerciseCard({ ex, unit, workouts, priorBest, onToggle, dispatch }) {
+function ExerciseCard({ ex, unit, onUnitChange, workouts, priorBest, onToggle, dispatch, defaultCollapsed = true }) {
   const doneCount = ex.sets.filter((s) => s.done).length;
   const allDone = ex.sets.length > 0 && doneCount === ex.sets.length;
-  const [collapsed, setCollapsed] = useState(allDone);
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const [lightbox, setLightbox] = useState(false);
   const fileRef = useRef(null);
 
+  // Auto-collapse when the last set is checked and auto-expand when one is
+  // unchecked, without overriding the initial collapsed state on mount.
+  const prevAllDone = useRef(allDone);
   useEffect(() => {
+    if (prevAllDone.current === allDone) return;
+    prevAllDone.current = allDone;
     setCollapsed(allDone);
   }, [allDone]);
 
@@ -361,6 +397,11 @@ function ExerciseCard({ ex, unit, workouts, priorBest, onToggle, dispatch }) {
             transition={{ duration: 0.25 }}
             className="flex flex-col gap-3 overflow-hidden"
           >
+            <div className="-mt-1 flex items-center justify-between gap-2 text-xs font-semibold text-[var(--color-muted-foreground)]">
+              <span>יחידת המכשיר</span>
+              <UnitToggle unit={unit} onChange={(u) => { vibrate(5); onUnitChange(u); }} />
+            </div>
+
             {overload && (
               <p className="tnum -mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-[var(--color-muted-foreground)]">
                 <span>פעם קודמת: <span className="font-bold text-[var(--color-card-foreground)]">{overload.top.weight ? fmtWeightBoth(overload.top.weight, unit) : '—'} × {overload.top.reps}</span></span>

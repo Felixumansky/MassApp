@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, Pencil, Trash2, X } from 'lucide-react';
+import { Clock, Pencil, Trash2, X, Dumbbell } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { GlassCard, MuscleTag } from './ui.jsx';
 import {
@@ -15,13 +16,25 @@ import {
 import { useDialogFocus } from '../lib/useDialogFocus.js';
 
 export default function WorkoutHistoryList({ workouts, unit }) {
-  const { dispatch } = useStore();
+  const { state, dispatch } = useStore();
+  const navigate = useNavigate();
   const [editing, setEditing] = useState(null);
 
   function deleteWorkout(workout) {
     if (!confirm(`למחוק את "${workout.name || 'אימון'}"?`)) return;
     vibrate(8);
     dispatch({ type: 'deleteWorkout', id: workout.id });
+  }
+
+  function editFull(workout) {
+    if (state.active) {
+      alert('יש אימון פעיל. סיים או בטל אותו לפני עריכה מלאה של אימון מההיסטוריה.');
+      return;
+    }
+    vibrate(8);
+    dispatch({ type: 'editWorkout', id: workout.id });
+    setEditing(null);
+    navigate('/workout');
   }
 
   return (
@@ -42,6 +55,7 @@ export default function WorkoutHistoryList({ workouts, unit }) {
       <WorkoutEditor
         workout={editing}
         onClose={() => setEditing(null)}
+        onEditFull={editFull}
         onSave={(id, patch) => {
           dispatch({ type: 'updateWorkout', id, patch });
           setEditing(null);
@@ -95,12 +109,12 @@ function WorkoutRow({ workout: w, unit, onEdit, onDelete }) {
   );
 }
 
-function WorkoutEditor({ workout, onClose, onSave }) {
+function WorkoutEditor({ workout, onClose, onSave, onEditFull }) {
   if (!workout) return null;
-  return <WorkoutEditorInner key={workout.id} workout={workout} onClose={onClose} onSave={onSave} />;
+  return <WorkoutEditorInner key={workout.id} workout={workout} onClose={onClose} onSave={onSave} onEditFull={onEditFull} />;
 }
 
-function WorkoutEditorInner({ workout, onClose, onSave }) {
+function WorkoutEditorInner({ workout, onClose, onSave, onEditFull }) {
   const [name, setName] = useState(workout.name || '');
   const [date, setDate] = useState(workout.date || dayKey());
   const [durationMin, setDurationMin] = useState(Math.max(1, Math.round((Number(workout.durationSec) || 60) / 60)));
@@ -173,6 +187,14 @@ function WorkoutEditorInner({ workout, onClose, onSave }) {
             required
           />
         </label>
+
+        <button
+          type="button"
+          onClick={() => onEditFull(workout)}
+          className="press glass flex items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold"
+        >
+          <Dumbbell className="size-4 text-[var(--color-volt)]" /> עריכה מלאה — תרגילים וסטים
+        </button>
 
         <button type="submit" className="btn-volt press mt-1 rounded-2xl py-3.5 text-sm font-bold">
           שמור שינויים

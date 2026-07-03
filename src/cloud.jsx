@@ -54,13 +54,30 @@ function mergeList(local = [], remote = []) {
   return [...new Map([...byId(remote), ...byId(local)]).values()];
 }
 
+/** One body-weight entry per date: the local version wins over a stale server copy. */
+function mergeWeights(local = [], remote = [], isDeleted) {
+  const localByDate = new Map(local.map((b) => [b.date, b.id]));
+  const byDate = new Map();
+  for (const b of mergeList(local, remote)) {
+    if (isDeleted(b)) continue;
+    const preferredId = localByDate.get(b.date);
+    if (!byDate.has(b.date) || b.id === preferredId) byDate.set(b.date, b);
+  }
+  return [...byDate.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+
 function mergeSyncedState(local, remote = {}) {
+  // Union of tombstones from both sides, so a delete made on any device sticks
+  // instead of being resurrected by the id-union merge below.
+  const deletedIds = new Set([...(local.deletedIds || []), ...(remote.deletedIds || [])]);
+  const alive = (item) => !deletedIds.has(item.id);
   return {
     profile: Object.keys(remote.profile || {}).length ? { ...local.profile, ...remote.profile } : local.profile,
-    workouts: mergeList(local.workouts, remote.workouts).sort((a, b) => (a.date < b.date ? 1 : -1)),
-    routines: mergeList(local.routines, remote.routines),
-    bodyWeights: mergeList(local.bodyWeights, remote.bodyWeights).sort((a, b) => (a.date < b.date ? -1 : 1)),
-    customExercises: mergeList(local.customExercises, remote.customExercises),
+    workouts: mergeList(local.workouts, remote.workouts).filter(alive).sort((a, b) => (a.date < b.date ? 1 : -1)),
+    routines: mergeList(local.routines, remote.routines).filter(alive),
+    bodyWeights: mergeWeights(local.bodyWeights, remote.bodyWeights, (b) => !alive(b)),
+    customExercises: mergeList(local.customExercises, remote.customExercises).filter(alive),
+    deletedIds: [...deletedIds].slice(-1000),
   };
 }
 
@@ -78,6 +95,7 @@ export function CloudProvider({ children }) {
   const pushTimer = useRef(null);
   const retryTimer = useRef(null);
   const latestSlice = useRef(null);
+  const dirty = useRef(false); // changes not yet pushed to the server
 
   const persistAuth = useCallback((next) => {
     if (next) {
@@ -98,8 +116,9 @@ export function CloudProvider({ children }) {
       routines: state.routines,
       bodyWeights: state.bodyWeights,
       customExercises: state.customExercises,
+      deletedIds: state.deletedIds || [],
     }),
-    [state.profile, state.workouts, state.routines, state.bodyWeights, state.customExercises]
+    [state.profile, state.workouts, state.routines, state.bodyWeights, state.customExercises, state.deletedIds]
   );
   const sliceKey = JSON.stringify(slice);
   latestSlice.current = slice;
@@ -213,11 +232,13 @@ export function CloudProvider({ children }) {
   useEffect(() => {
     if (!auth?.token || !ready.current) return undefined;
     setStatus('syncing');
+    dirty.current = true;
     clearTimeout(pushTimer.current);
     clearTimeout(retryTimer.current);
     pushTimer.current = setTimeout(async () => {
       try {
         await api.putState(auth.token, latestSlice.current);
+        dirty.current = false;
         setStatus('synced');
       } catch (e) {
         setStatus('error');
@@ -226,6 +247,7 @@ export function CloudProvider({ children }) {
           try {
             setStatus('syncing');
             await api.putState(auth.token, latestSlice.current);
+            dirty.current = false;
             setStatus('synced');
           } catch (retryErr) {
             setStatus('error');
@@ -239,6 +261,35 @@ export function CloudProvider({ children }) {
       clearTimeout(retryTimer.current);
     };
   }, [sliceKey, auth?.token, readyVersion]);
+
+  // Going to background: flush a pending push right away — the 900ms debounce
+  // loses the last change when the app is closed straight after it. Coming back
+  // to foreground: retry the initial reconcile if it failed (otherwise the whole
+  // session would silently never sync).
+  useEffect(() => {
+    const flush = () => {
+      if (document.visibilityState !== 'hidden') {
+        if (auth?.token && !locked && !ready.current) reconcile(auth.token);
+        return;
+      }
+      if (!auth?.token || !ready.current || !dirty.current) return;
+      clearTimeout(pushTimer.current);
+      clearTimeout(retryTimer.current);
+      api
+        .putState(auth.token, latestSlice.current)
+        .then(() => {
+          dirty.current = false;
+          setStatus('synced');
+        })
+        .catch(() => {}); // the debounced retry path will pick it up next time
+    };
+    document.addEventListener('visibilitychange', flush);
+    window.addEventListener('pagehide', flush);
+    return () => {
+      document.removeEventListener('visibilitychange', flush);
+      window.removeEventListener('pagehide', flush);
+    };
+  }, [auth?.token, locked, reconcile]);
 
   const value = useMemo(
     () => ({

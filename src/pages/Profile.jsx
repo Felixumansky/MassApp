@@ -116,7 +116,7 @@ export default function Profile() {
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-[var(--color-muted-foreground)]">התצוגה תמיד מציגה גם ליברות וגם ק״ג</p>
+            <p className="text-[11px] text-[var(--color-muted-foreground)]">התצוגה תמיד מציגה גם ליברות וגם ק״ג · לכל תרגיל אפשר לקבוע יחידה משלו באימון</p>
           </div>
         </Field>
       </GlassCard>

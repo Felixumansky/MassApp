@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Home, CalendarDays, Dumbbell, ClipboardList, TrendingUp, Plus } from 'lucide-react';
 import { useStore } from '../store.jsx';
+import StartWorkoutSheet from './StartWorkoutSheet.jsx';
 import { vibrate } from '../lib/utils.js';
 
 const items = [
@@ -14,14 +16,19 @@ const items = [
 export default function BottomNav() {
   const { state, dispatch } = useStore();
   const navigate = useNavigate();
+  const [typePicker, setTypePicker] = useState(false);
 
   function startOrResume() {
     vibrate(8);
-    if (!state.active) dispatch({ type: 'startWorkout' });
-    navigate('/workout');
+    if (state.active) {
+      navigate('/workout');
+      return;
+    }
+    setTypePicker(true);
   }
 
   return (
+    <>
     <nav
       className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-center justify-around border-t border-[var(--hairline)] bg-[var(--surface-solid)] px-2 pb-[max(0.5rem,var(--safe-b))] pt-2 lg:hidden"
       aria-label="ניווט ראשי"
@@ -45,6 +52,24 @@ export default function BottomNav() {
         <Tab key={it.to} {...it} />
       ))}
     </nav>
+
+    <StartWorkoutSheet
+      open={typePicker}
+      onClose={() => setTypePicker(false)}
+      routines={state.routines}
+      workouts={state.workouts}
+      customExercises={state.customExercises}
+      onPick={(routine) => {
+        setTypePicker(false);
+        dispatch({ type: 'startWorkout', ...(routine ? { routine } : {}) });
+        navigate('/workout');
+      }}
+      onCreateRoutine={() => {
+        setTypePicker(false);
+        navigate('/routines');
+      }}
+    />
+    </>
   );
 }
 

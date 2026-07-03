@@ -55,6 +55,9 @@ function profileDefaults() {
     name: '',
     unit: 'lb',
     unitMigratedLb: true,
+    // Per-exercise entry unit ('kg' | 'lb') keyed by exerciseId — machines
+    // differ, so each exercise remembers the unit it was last entered in.
+    exerciseUnits: {},
     weeklyGoal: 4,
     gymAutoStart: DEFAULT_GYM_AUTO_START,
   };
@@ -68,6 +71,7 @@ function normalizeProfile(profile = {}) {
       ...DEFAULT_GYM_AUTO_START,
       ...(profile.gymAutoStart || {}),
     },
+    exerciseUnits: { ...(profile.exerciseUnits || {}) },
   };
   // One-time switch of pre-existing profiles to lb entry (gym plates are in
   // pounds); afterwards the user's own toggle choice is respected.
@@ -89,8 +93,14 @@ export function seed() {
     workouts: [],
     bodyWeights: [],
     customExercises: [],
+    deletedIds: [],
     active: null,
   };
+}
+
+/** Remember deleted ids so cloud merge won't resurrect them from the server. */
+function tombstone(state, ...ids) {
+  return [...(state.deletedIds || []), ...ids].slice(-1000);
 }
 
 function load() {
@@ -126,6 +136,7 @@ export function reducer(state, action) {
         routines: action.data.routines || [],
         bodyWeights: action.data.bodyWeights || [],
         customExercises: action.data.customExercises || [],
+        deletedIds: action.data.deletedIds || state.deletedIds || [],
       };
 
     case 'startWorkout': {
@@ -174,6 +185,7 @@ export function reducer(state, action) {
         ...state,
         active: {
           ...state.active,
+          ...(action.name != null ? { name: action.name } : null),
           ...(action.date ? { date: action.date } : null),
           ...(action.durationSec != null
             ? { durationSec: Math.max(60, Math.round(Number(action.durationSec) || 60)) }
@@ -316,6 +328,31 @@ export function reducer(state, action) {
         },
       };
 
+    case 'editWorkout': {
+      // Reopen a saved workout for full editing. The original stays in history
+      // until finishWorkout replaces it (same id), so discarding loses nothing.
+      if (state.active) return state;
+      const w = state.workouts.find((x) => x.id === action.id);
+      if (!w) return state;
+      return {
+        ...state,
+        active: {
+          id: w.id,
+          date: w.date,
+          name: w.name,
+          routineId: w.routineId ?? null,
+          startedAt: Date.now(),
+          retroactive: true,
+          durationSec: Math.max(60, Math.round(Number(w.durationSec) || 60)),
+          exercises: (w.exercises || []).map((e) => ({
+            ...e,
+            uid: e.uid || uid(),
+            sets: (e.sets || []).map((s) => ({ ...s, id: s.id || uid() })),
+          })),
+        },
+      };
+    }
+
     case 'updateExercisePhoto':
       if (!state.active) return state;
       return {
@@ -347,7 +384,7 @@ export function reducer(state, action) {
       return {
         ...state,
         active: null,
-        workouts: [finished, ...state.workouts].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
+        workouts: [finished, ...state.workouts.filter((w) => w.id !== finished.id)].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
       };
     }
 
@@ -355,7 +392,11 @@ export function reducer(state, action) {
       return { ...state, active: null };
 
     case 'deleteWorkout':
-      return { ...state, workouts: state.workouts.filter((w) => w.id !== action.id) };
+      return {
+        ...state,
+        workouts: state.workouts.filter((w) => w.id !== action.id),
+        deletedIds: tombstone(state, action.id),
+      };
 
     case 'updateWorkout': {
       const next = state.workouts
@@ -386,21 +427,32 @@ export function reducer(state, action) {
     }
 
     case 'deleteRoutine':
-      return { ...state, routines: state.routines.filter((r) => r.id !== action.id) };
+      return {
+        ...state,
+        routines: state.routines.filter((r) => r.id !== action.id),
+        deletedIds: tombstone(state, action.id),
+      };
 
     case 'addBodyWeight': {
       const date = action.date ?? dayKey();
+      // Keep the existing id when re-weighing the same day, so the cloud merge
+      // (which unions by id) updates the entry instead of duplicating it.
+      const existing = state.bodyWeights.find((b) => b.date === date);
       const rest = state.bodyWeights.filter((b) => b.date !== date);
       return {
         ...state,
-        bodyWeights: [...rest, { id: uid(), date, weight: Number(action.weight) }].sort((a, b) =>
+        bodyWeights: [...rest, { id: existing?.id ?? uid(), date, weight: Number(action.weight) }].sort((a, b) =>
           a.date < b.date ? -1 : 1
         ),
       };
     }
 
     case 'deleteBodyWeight':
-      return { ...state, bodyWeights: state.bodyWeights.filter((b) => b.id !== action.id) };
+      return {
+        ...state,
+        bodyWeights: state.bodyWeights.filter((b) => b.id !== action.id),
+        deletedIds: tombstone(state, action.id),
+      };
 
     case 'addCustomExercise': {
       const id = 'cx-' + uid();
@@ -412,6 +464,7 @@ export function reducer(state, action) {
       return {
         ...state,
         customExercises: (state.customExercises || []).filter((e) => e.id !== action.id),
+        deletedIds: tombstone(state, action.id),
       };
 
     default:
