@@ -15,6 +15,7 @@ const ActiveWorkout = lazy(() => import('./pages/ActiveWorkout.jsx'));
 const Library = lazy(() => import('./pages/Library.jsx'));
 const Routines = lazy(() => import('./pages/Routines.jsx'));
 const Progress = lazy(() => import('./pages/Progress.jsx'));
+const Weight = lazy(() => import('./pages/Weight.jsx'));
 const Calendar = lazy(() => import('./pages/Calendar.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
 
@@ -37,6 +38,7 @@ function AnimatedRoutes() {
         <Route path="/routines" element={page(Routines)} />
         <Route path="/calendar" element={page(Calendar)} />
         <Route path="/progress" element={page(Progress)} />
+        <Route path="/weight" element={page(Weight)} />
         <Route path="/profile" element={page(Profile)} />
         <Route path="*" element={page(Dashboard)} />
       </Routes>

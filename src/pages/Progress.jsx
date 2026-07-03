@@ -1,18 +1,19 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
-import { Trophy, Dumbbell, Layers, Plus, Trash2, Activity, Flame } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Trophy, Dumbbell, Layers, Scale, ChevronLeft, Activity, Flame } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, EmptyState, AppLoader } from '../components/ui.jsx';
 import WorkoutHistoryList from '../components/WorkoutHistory.jsx';
-import { workoutVolume, epley1rm, shortDateHe, dayKey, vibrate, toUnit, fmtWeight, toKg, unitLabel } from '../lib/utils.js';
+import { workoutVolume, epley1rm, shortDateHe, dayKey, toUnit, fmtWeight, unitLabel } from '../lib/utils.js';
 import { MUSCLES, muscleById } from '../lib/exercises.js';
 import { setsByMuscle, muscleSetStatus, HYPERTROPHY_MIN, HYPERTROPHY_MAX, hasAnyRpe, weeklyRpeStats } from '../lib/analytics.js';
 
 const VolumeChart = lazy(() => import('../components/ProgressCharts.jsx').then((m) => ({ default: m.VolumeChart })));
-const WeightChart = lazy(() => import('../components/ProgressCharts.jsx').then((m) => ({ default: m.WeightChart })));
 const RpeChart = lazy(() => import('../components/ProgressCharts.jsx').then((m) => ({ default: m.RpeChart })));
 
 export default function Progress() {
-  const { state, dispatch } = useStore();
+  const { state } = useStore();
+  const navigate = useNavigate();
   const { workouts, bodyWeights, profile } = state;
   const unit = profile.unit || 'kg';
   const [volExId, setVolExId] = useState('all');
@@ -55,10 +56,7 @@ export default function Progress() {
     return buckets;
   }, [workouts, volExId, unit]);
 
-  const weights = useMemo(
-    () => bodyWeights.map((b) => ({ label: shortDateHe(b.date), weight: fmtWeight(b.weight, unit) })),
-    [bodyWeights, unit]
-  );
+  const latestWeight = bodyWeights.at(-1);
 
   // Feature 1 — working sets per muscle group, this week or a 4‑week average.
   const muscleBalance = useMemo(() => {
@@ -101,11 +99,34 @@ export default function Progress() {
     [workouts]
   );
 
+  const weightLink = (
+    <button onClick={() => navigate('/weight')} className="press w-full text-start">
+      <GlassCard className="flex items-center gap-3">
+        <span className="flex size-10 items-center justify-center rounded-2xl" style={{ background: 'rgba(94,194,245,0.14)' }}>
+          <Scale className="size-5" style={{ color: 'var(--color-cyan)' }} />
+        </span>
+        <div className="flex-1">
+          <p className="font-bold">משקל גוף</p>
+          <p className="text-xs text-[var(--color-muted-foreground)]">
+            {latestWeight ? `עודכן לאחרונה ${shortDateHe(latestWeight.date)}` : 'הוסף שקילה ראשונה'}
+          </p>
+        </div>
+        {latestWeight && (
+          <span className="tnum text-lg font-extrabold" style={{ color: 'var(--color-cyan)' }}>
+            {fmtWeight(latestWeight.weight, unit)}<span className="text-xs text-[var(--color-muted-foreground)]"> {unitLabel(unit)}</span>
+          </span>
+        )}
+        <ChevronLeft className="size-5 text-[var(--color-muted-foreground)]" />
+      </GlassCard>
+    </button>
+  );
+
   if (workouts.length === 0) {
     return (
-      <div>
+      <div className="flex flex-col gap-5">
         <PageHeader subtitle="נתונים" title="התקדמות" />
         <EmptyState icon={Trophy} title="אין נתונים עדיין" hint="השלם אימון אחד לפחות כדי לראות גרפים ושיאים." />
+        {weightLink}
       </div>
     );
   }
@@ -197,26 +218,7 @@ export default function Progress() {
         </GlassCard>
       )}
 
-      <GlassCard>
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <h2 className="font-bold">משקל גוף</h2>
-            <p className="text-xs text-[var(--color-muted-foreground)]">מגמה לאורך זמן</p>
-          </div>
-          <AddWeightButton unit={unit} onAdd={(weight, date) => dispatch({ type: 'addBodyWeight', weight, date })} />
-        </div>
-        {weights.length > 0 ? (
-          <Suspense fallback={<AppLoader label="טוען גרף…" />}>
-            <WeightChart data={weights} unit={unit} />
-          </Suspense>
-        ) : (
-          <p className="py-6 text-center text-sm text-[var(--color-muted-foreground)]">הוסף שקילה ראשונה</p>
-        )}
-
-        {bodyWeights.length > 0 && (
-          <WeightHistory entries={bodyWeights} unit={unit} onDelete={(id) => dispatch({ type: 'deleteBodyWeight', id })} />
-        )}
-      </GlassCard>
+      {weightLink}
 
       <section>
         <div className="mb-2 flex items-center gap-2">
@@ -306,60 +308,3 @@ function MuscleBalanceCard({ data, range, onRange }) {
   );
 }
 
-function AddWeightButton({ onAdd, unit }) {
-  const [open, setOpen] = useState(false);
-  const [val, setVal] = useState('');
-  const [date, setDate] = useState(dayKey());
-  const today = dayKey();
-
-  if (!open) {
-    return (
-      <button onClick={() => { setVal(''); setDate(today); setOpen(true); }} className="press glass flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-bold">
-        <Plus className="size-3.5 text-[var(--color-cyan)]" /> שקילה
-      </button>
-    );
-  }
-  return (
-    <form
-      onSubmit={(e) => { e.preventDefault(); if (val) { vibrate(8); onAdd(toKg(val, unit), date); } setVal(''); setOpen(false); }}
-      className="flex items-center gap-1.5"
-    >
-      <input
-        type="date" value={date} max={today} onChange={(e) => setDate(e.target.value)}
-        className="tnum glass rounded-xl px-2 py-1.5 text-xs font-bold outline-none [color-scheme:dark]"
-        aria-label="תאריך שקילה"
-      />
-      <input
-        autoFocus type="number" inputMode="decimal" step="0.1" value={val} onChange={(e) => setVal(e.target.value)}
-        placeholder={unitLabel(unit)} className="tnum glass w-14 rounded-xl px-2 py-1.5 text-center text-sm font-bold outline-none"
-        aria-label={`משקל ב${unitLabel(unit)}`}
-      />
-      <button type="submit" className="btn-volt press rounded-xl px-2.5 py-1.5 text-xs font-bold">שמור</button>
-    </form>
-  );
-}
-
-function WeightHistory({ entries, onDelete, unit }) {
-  const [open, setOpen] = useState(false);
-  const sorted = [...entries].sort((a, b) => (a.date < b.date ? 1 : -1));
-  return (
-    <div className="mt-3 border-t border-[var(--hairline)] pt-3">
-      <button onClick={() => setOpen((o) => !o)} className="press text-xs font-semibold text-[var(--color-muted-foreground)]">
-        {open ? 'הסתר היסטוריית שקילות' : `היסטוריית שקילות (${entries.length})`}
-      </button>
-      {open && (
-        <ul className="mt-2 flex flex-col gap-1.5">
-          {sorted.map((b) => (
-            <li key={b.id} className="flex items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-3 py-2">
-              <span className="text-sm text-[var(--color-muted-foreground)]">{shortDateHe(b.date)}</span>
-              <span className="tnum flex-1 text-end text-sm font-bold">{fmtWeight(b.weight, unit)} {unitLabel(unit)}</span>
-              <button onClick={() => { vibrate(8); onDelete(b.id); }} className="press text-[var(--color-muted-foreground)]" aria-label="מחק שקילה">
-                <Trash2 className="size-3.5" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}

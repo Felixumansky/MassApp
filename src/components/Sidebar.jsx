@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, CalendarDays, Dumbbell, ClipboardList, TrendingUp, User, Zap, Play, LogOut } from 'lucide-react';
+import { Home, CalendarDays, Dumbbell, ClipboardList, TrendingUp, Scale, User, Zap, Play, LogOut } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { useCloud } from '../cloud.jsx';
 
@@ -9,6 +9,7 @@ const links = [
   { to: '/library', label: 'תרגילים', icon: Dumbbell },
   { to: '/routines', label: 'תוכניות', icon: ClipboardList },
   { to: '/progress', label: 'התקדמות', icon: TrendingUp },
+  { to: '/weight', label: 'משקל גוף', icon: Scale },
   { to: '/profile', label: 'פרופיל', icon: User },
 ];
 
