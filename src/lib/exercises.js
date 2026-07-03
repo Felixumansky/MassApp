@@ -1,5 +1,9 @@
-/* Exercise library — Hebrew names, grouped by muscle.
-   Each muscle has an id, label, accent color (CSS var name), and an icon emoji-free key. */
+/* Exercise library — muscle groups + the full exercise catalog.
+   MUSCLES stays the app's 8 groups; EXERCISES now comes from the generated
+   ExerciseDB catalog (regenerate via scripts/build-exercises.mjs). */
+import { CATALOG, LEGACY_ALIASES } from './exercisesCatalog.js';
+
+export { LEGACY_ALIASES };
 
 export const MUSCLES = [
   { id: 'chest', label: 'חזה', color: '#fb7185' },
@@ -14,52 +18,24 @@ export const MUSCLES = [
 
 export const muscleById = (id) => MUSCLES.find((m) => m.id === id) || MUSCLES[0];
 
-export const EXERCISES = [
-  // chest
-  { id: 'bench-press', name: 'לחיצת חזה במוט', muscle: 'chest' },
-  { id: 'incline-db-press', name: 'לחיצת חזה בשיפוע (משקולות)', muscle: 'chest' },
-  { id: 'chest-fly', name: 'פרפר במכונה', muscle: 'chest' },
-  { id: 'pushup', name: 'שכיבות סמיכה', muscle: 'chest' },
-  { id: 'dips', name: 'מקבילים', muscle: 'chest' },
-  // back
-  { id: 'deadlift', name: 'דדליפט', muscle: 'back' },
-  { id: 'pullup', name: 'מתח', muscle: 'back' },
-  { id: 'bent-row', name: 'חתירה במוט בהטיה', muscle: 'back' },
-  { id: 'lat-pulldown', name: 'פולי עליון', muscle: 'back' },
-  { id: 'seated-row', name: 'חתירה בישיבה', muscle: 'back' },
-  // shoulders
-  { id: 'ohp', name: 'לחיצת כתפיים מעל הראש', muscle: 'shoulders' },
-  { id: 'lateral-raise', name: 'הרחקת כתפיים לצדדים', muscle: 'shoulders' },
-  { id: 'face-pull', name: 'משיכת פנים', muscle: 'shoulders' },
-  { id: 'rear-delt-fly', name: 'פרפר אחורי', muscle: 'shoulders' },
-  // biceps
-  { id: 'barbell-curl', name: 'כפיפת מרפק במוט', muscle: 'biceps' },
-  { id: 'db-curl', name: 'כפיפת מרפק במשקולות', muscle: 'biceps' },
-  { id: 'hammer-curl', name: 'כפיפת פטיש', muscle: 'biceps' },
-  // triceps
-  { id: 'triceps-pushdown', name: 'פשיטת מרפק בפולי', muscle: 'triceps' },
-  { id: 'overhead-ext', name: 'פשיטת מרפק מעל הראש', muscle: 'triceps' },
-  { id: 'skull-crusher', name: 'סקאל קראשר', muscle: 'triceps' },
-  // legs
-  { id: 'squat', name: 'סקוואט', muscle: 'legs' },
-  { id: 'leg-press', name: 'לחיצת רגליים', muscle: 'legs' },
-  { id: 'leg-ext', name: 'פשיטת ברך', muscle: 'legs' },
-  { id: 'leg-curl', name: 'כפיפת ברך', muscle: 'legs' },
-  { id: 'calf-raise', name: 'הרמת עקבים', muscle: 'legs' },
-  // glutes
-  { id: 'hip-thrust', name: 'היפ ת׳ראסט', muscle: 'glutes' },
-  { id: 'rdl', name: 'דדליפט רומני', muscle: 'glutes' },
-  { id: 'lunge', name: 'לאנג׳', muscle: 'glutes' },
-  // core
-  { id: 'plank', name: 'פלאנק', muscle: 'core' },
-  { id: 'hanging-leg-raise', name: 'הרמת רגליים בתלייה', muscle: 'core' },
-  { id: 'cable-crunch', name: 'כפיפת בטן בפולי', muscle: 'core' },
-];
+export const EXERCISES = CATALOG;
 
-export const exerciseById = (id) => EXERCISES.find((e) => e.id === id);
+const _byId = new Map(EXERCISES.map((e) => [e.id, e]));
+
+/** Look up a built-in exercise by id, resolving legacy ids (e.g. 'bench-press')
+    to their new catalog entry via LEGACY_ALIASES so old routines keep working. */
+export const exerciseById = (id) => _byId.get(id) || _byId.get(LEGACY_ALIASES[id]);
 
 export function resolveExercise(id, customExercises = []) {
   return (customExercises || []).find((e) => e.id === id) || exerciseById(id);
+}
+
+/** Bilingual search match: Hebrew name (as-is) OR English name (case-insensitive). */
+export function matchesExercise(ex, needle) {
+  const n = String(needle || '').trim();
+  if (!n) return true;
+  if (ex.name && ex.name.includes(n)) return true;
+  return !!ex.name_en && ex.name_en.toLowerCase().includes(n.toLowerCase());
 }
 
 export function routineExerciseId(entry) {

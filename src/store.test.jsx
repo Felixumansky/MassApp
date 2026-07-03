@@ -23,6 +23,143 @@ describe('store reducer', () => {
     expect(next.active.exercises[0].sets[0]).toMatchObject({ reps: '8', rpe: '', done: false });
   });
 
+  it('prefills exercises and weights from the last workout of the same routine', () => {
+    const routine = { id: 'r-push', name: 'Push', exercises: [{ exerciseId: 'bench-press', targetSets: 3, targetReps: '8' }] };
+    const state = {
+      ...seed(),
+      workouts: [
+        {
+          id: 'w-prev',
+          date: '2026-06-28',
+          name: 'Push',
+          routineId: 'r-push',
+          durationSec: 3600,
+          exercises: [
+            {
+              uid: 'ex-1',
+              exerciseId: 'bench-press',
+              name: 'לחיצת חזה במוט',
+              muscle: 'chest',
+              targetReps: '8',
+              note: 'ספסל 4',
+              sets: [
+                { id: 's-1', reps: '8', weight: '80', rpe: '8', done: true },
+                { id: 's-2', reps: '6', weight: '85', rpe: '9', done: true },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const next = reducer(state, { type: 'startWorkout', routine });
+
+    expect(next.active.routineId).toBe('r-push');
+    const ex = next.active.exercises[0];
+    expect(ex.name).toBe('לחיצת חזה במוט');
+    expect(ex.note).toBe('ספסל 4');
+    expect(ex.sets).toHaveLength(2);
+    expect(ex.sets[0]).toMatchObject({ reps: '8', weight: '80', rpe: '', done: false });
+    expect(ex.sets[1]).toMatchObject({ reps: '6', weight: '85', rpe: '', done: false });
+    expect(ex.sets[0].id).not.toBe('s-1');
+  });
+
+  it('prefills by name for old history without routineId', () => {
+    const routine = { id: 'r-push', name: 'Push', exercises: ['bench-press'] };
+    const state = {
+      ...seed(),
+      workouts: [
+        {
+          id: 'w-old',
+          date: '2026-06-20',
+          name: 'Push',
+          durationSec: 3600,
+          exercises: [
+            {
+              uid: 'ex-1',
+              exerciseId: 'bench-press',
+              name: 'לחיצת חזה במוט',
+              muscle: 'chest',
+              sets: [{ id: 's-1', reps: '10', weight: '70', rpe: '', done: true }],
+            },
+          ],
+        },
+      ],
+    };
+
+    const next = reducer(state, { type: 'startWorkout', routine });
+    expect(next.active.exercises[0].sets[0]).toMatchObject({ reps: '10', weight: '70', done: false });
+  });
+
+  it('falls back to routine targets when there is no history of that type', () => {
+    const routine = { id: 'r-new', name: 'Legs', exercises: [{ exerciseId: 'squat', targetSets: 4, targetReps: '5' }] };
+    const next = reducer(seed(), { type: 'startWorkout', routine });
+    expect(next.active.exercises[0].sets).toHaveLength(4);
+    expect(next.active.exercises[0].sets[0]).toMatchObject({ reps: '5', weight: '', done: false });
+  });
+
+  it('stores routineId on finished workouts', () => {
+    const routine = { id: 'r-push', name: 'Push', exercises: [] };
+    const started = reducer(seed(), { type: 'startWorkout', routine });
+    const withExercise = {
+      ...started,
+      active: {
+        ...started.active,
+        exercises: [
+          {
+            uid: 'ex-1',
+            exerciseId: 'bench-press',
+            name: 'לחיצת חזה במוט',
+            muscle: 'chest',
+            sets: [{ id: 's-1', reps: '5', weight: '100', rpe: '', done: true }],
+          },
+        ],
+      },
+    };
+    const next = reducer(withExercise, { type: 'finishWorkout' });
+    expect(next.workouts[0].routineId).toBe('r-push');
+  });
+
+  it('prefills sets from history when adding an exercise mid-workout', () => {
+    const state = {
+      ...seed(),
+      workouts: [
+        {
+          id: 'w-prev',
+          date: '2026-06-28',
+          name: 'אימון חופשי',
+          durationSec: 3600,
+          exercises: [
+            {
+              uid: 'ex-1',
+              exerciseId: 'bench-press',
+              name: 'לחיצת חזה במוט',
+              muscle: 'chest',
+              sets: [
+                { id: 's-1', reps: '8', weight: '80', rpe: '', done: true },
+                { id: 's-2', reps: '8', weight: '80', rpe: '', done: true },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const started = reducer(state, { type: 'startWorkout' });
+    const next = reducer(started, { type: 'addExercise', exerciseId: 'bench-press' });
+
+    const ex = next.active.exercises[0];
+    expect(ex.sets).toHaveLength(2);
+    expect(ex.sets[0]).toMatchObject({ reps: '8', weight: '80', done: false });
+  });
+
+  it('adds an exercise with one empty set when it has no history', () => {
+    const started = reducer(seed(), { type: 'startWorkout' });
+    const next = reducer(started, { type: 'addExercise', exerciseId: 'bench-press' });
+    expect(next.active.exercises[0].sets).toEqual([
+      { id: expect.any(String), reps: '', weight: '', rpe: '', done: false },
+    ]);
+  });
+
   it('keeps only completed sets when finishing a workout', () => {
     const started = reducer(seed(), { type: 'startWorkout' });
     const withExercise = {

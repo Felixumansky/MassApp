@@ -1,16 +1,18 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X } from 'lucide-react';
-import { EXERCISES, MUSCLES, muscleById } from '../lib/exercises.js';
+import { Search, X, Info } from 'lucide-react';
+import { EXERCISES, MUSCLES, muscleById, matchesExercise } from '../lib/exercises.js';
 import { vibrate } from '../lib/utils.js';
 import { useStore } from '../store.jsx';
 import { useDialogFocus } from '../lib/useDialogFocus.js';
+import ExerciseDetail from './ExerciseDetail.jsx';
 
 /** Bottom-sheet exercise picker with search + muscle filter. */
 export default function ExercisePicker({ open, onClose, onPick, excludeIds = [] }) {
   const { state } = useStore();
   const [q, setQ] = useState('');
   const [muscle, setMuscle] = useState('all');
+  const [detail, setDetail] = useState(null);
   const dialogRef = useDialogFocus(open, onClose);
 
   const results = useMemo(() => {
@@ -18,12 +20,13 @@ export default function ExercisePicker({ open, onClose, onPick, excludeIds = [] 
     const all = [...EXERCISES, ...(state.customExercises || [])];
     return all.filter((e) => {
       if (muscle !== 'all' && e.muscle !== muscle) return false;
-      if (needle && !e.name.includes(needle)) return false;
+      if (needle && !matchesExercise(e, needle)) return false;
       return true;
     });
   }, [q, muscle, state.customExercises]);
 
   return (
+    <>
     <AnimatePresence>
       {open && (
         <>
@@ -76,17 +79,33 @@ export default function ExercisePicker({ open, onClose, onPick, excludeIds = [] 
                 const used = excludeIds.includes(e.id);
                 const m = muscleById(e.muscle);
                 return (
-                  <button
+                  <div
                     key={e.id}
-                    disabled={used}
-                    onClick={() => { vibrate(8); onPick(e.id); }}
-                    className="press mb-1.5 flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-start disabled:opacity-40"
+                    className="mb-1.5 flex items-stretch gap-1 rounded-2xl"
                     style={{ background: 'rgba(255,255,255,0.04)' }}
                   >
-                    <span className="size-2.5 rounded-full" style={{ background: m.color }} />
-                    <span className="flex-1 font-semibold">{e.name}</span>
-                    <span className="text-xs text-[var(--color-muted-foreground)]">{m.label}</span>
-                  </button>
+                    <button
+                      disabled={used}
+                      onClick={() => { vibrate(8); onPick(e.id); }}
+                      className="press flex min-w-0 flex-1 items-center gap-3 rounded-2xl px-3 py-3 text-start disabled:opacity-40"
+                    >
+                      <span className="size-2.5 shrink-0 rounded-full" style={{ background: m.color }} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-semibold">{e.name}</span>
+                        {e.name_en && e.name_en !== e.name && (
+                          <span dir="ltr" className="block truncate text-start text-[11px] text-[var(--color-muted-foreground)]">{e.name_en}</span>
+                        )}
+                      </span>
+                      <span className="shrink-0 text-xs text-[var(--color-muted-foreground)]">{m.label}</span>
+                    </button>
+                    <button
+                      onClick={() => setDetail(e)}
+                      className="press flex shrink-0 items-center px-2.5 text-[var(--color-muted-foreground)]"
+                      aria-label="פרטי תרגיל"
+                    >
+                      <Info className="size-4" />
+                    </button>
+                  </div>
                 );
               })}
               {results.length === 0 && (
@@ -97,6 +116,8 @@ export default function ExercisePicker({ open, onClose, onPick, excludeIds = [] 
         </>
       )}
     </AnimatePresence>
+    <ExerciseDetail exercise={detail} onClose={() => setDetail(null)} />
+    </>
   );
 }
 

@@ -9,6 +9,33 @@ function findEx(state, id) {
   return resolveExercise(id, state.customExercises);
 }
 
+/** Most recent saved workout of the same type. Matches by routineId (new data)
+    and falls back to name equality (old history has no routineId). */
+function lastWorkoutOfType(workouts, routine) {
+  if (!routine) return null;
+  return (
+    workouts.find((w) => w.routineId === routine.id) ||
+    workouts.find((w) => !w.routineId && w.name === routine.name) ||
+    null
+  );
+}
+
+/** Copy a saved workout's exercises into fresh active exercises: fresh ids,
+    done:false, keep weight+reps+note. RPE is reset — it's a per-session
+    outcome, and finishWorkout keeps whatever is in a checked set. */
+function prefillExercises(prev) {
+  return prev.exercises.map((e) => ({
+    uid: uid(),
+    exerciseId: e.exerciseId,
+    name: e.name,
+    muscle: e.muscle,
+    targetSets: e.sets.length || e.targetSets || 1,
+    targetReps: e.targetReps ?? '',
+    note: e.note || '',
+    sets: e.sets.map((s) => ({ id: uid(), reps: s.reps, weight: s.weight, rpe: '', done: false })),
+  }));
+}
+
 const STARTER = {
   id: 'r-ppl-push',
   name: 'Push — דחיפה',
@@ -117,16 +144,18 @@ export function reducer(state, action) {
             };
           })
         : [];
+      const prev = lastWorkoutOfType(state.workouts, action.routine);
       return {
         ...state,
         active: {
           id: uid(),
           date: action.date ?? dayKey(),
           name: action.routine?.name ?? 'אימון חופשי',
+          routineId: action.routine?.id ?? null,
           startedAt: Date.now(),
           retroactive: !!action.retroactive,
           durationSec: action.retroactive ? Math.max(60, Math.round(Number(action.durationSec) || 3600)) : undefined,
-          exercises: fromRoutine,
+          exercises: prev ? prefillExercises(prev) : fromRoutine,
         },
       };
     }
@@ -147,6 +176,19 @@ export function reducer(state, action) {
     case 'addExercise': {
       if (!state.active) return state;
       const ex = findEx(state, action.exerciseId);
+      // Prefill sets from the last time this exercise was performed (workouts are
+      // newest-first). Compare canonical ids so legacy ids ('bench-press') in old
+      // workouts match the catalog id the picker hands out.
+      const canonicalId = (id) => findEx(state, id)?.id ?? id;
+      const wantedId = canonicalId(action.exerciseId);
+      let prevEx = null;
+      for (const w of state.workouts) {
+        prevEx = w.exercises.find((e) => canonicalId(e.exerciseId) === wantedId);
+        if (prevEx) break;
+      }
+      const sets = prevEx?.sets?.length
+        ? prevEx.sets.map((s) => ({ id: uid(), reps: s.reps, weight: s.weight, rpe: '', done: false }))
+        : [{ id: uid(), reps: '', weight: '', rpe: '', done: false }];
       return {
         ...state,
         active: {
@@ -158,10 +200,10 @@ export function reducer(state, action) {
               exerciseId: action.exerciseId,
               name: ex?.name ?? action.exerciseId,
               muscle: ex?.muscle ?? 'chest',
-              targetSets: 1,
-              targetReps: '',
-              note: '',
-              sets: [{ id: uid(), reps: '', weight: '', rpe: '', done: false }],
+              targetSets: sets.length,
+              targetReps: prevEx?.targetReps ?? '',
+              note: prevEx?.note ?? '',
+              sets,
             },
           ],
         },
@@ -275,6 +317,7 @@ export function reducer(state, action) {
         id: state.active.id,
         date: state.active.date,
         name: state.active.name,
+        routineId: state.active.routineId ?? null,
         durationSec,
         exercises: state.active.exercises
           .map((e) => ({ ...e, sets: e.sets.filter((s) => s.done) }))

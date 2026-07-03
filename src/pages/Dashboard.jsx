@@ -6,6 +6,7 @@ import { useCloud } from '../cloud.jsx';
 import { PageHeader, GlassCard } from '../components/ui.jsx';
 import WorkoutHistoryList from '../components/WorkoutHistory.jsx';
 import RetroWorkoutSheet from '../components/RetroWorkoutSheet.jsx';
+import StartWorkoutSheet from '../components/StartWorkoutSheet.jsx';
 import { workoutVolume, dayKey, fmtWeight, unitLabel } from '../lib/utils.js';
 
 function greeting() {
@@ -48,10 +49,14 @@ export default function Dashboard() {
   }, [workouts]);
 
   const recent = workouts.slice(0, 4);
+  const [typePicker, setTypePicker] = useState(false);
 
   function start() {
-    if (!active) dispatch({ type: 'startWorkout' });
-    navigate('/workout');
+    if (active) {
+      navigate('/workout');
+      return;
+    }
+    setTypePicker(true);
   }
 
   return (
@@ -129,6 +134,23 @@ export default function Dashboard() {
       ) : (
         <WorkoutHistoryList workouts={recent} unit={unit} />
       )}
+
+      <StartWorkoutSheet
+        open={typePicker}
+        onClose={() => setTypePicker(false)}
+        routines={state.routines}
+        workouts={workouts}
+        customExercises={state.customExercises}
+        onPick={(routine) => {
+          setTypePicker(false);
+          dispatch({ type: 'startWorkout', ...(routine ? { routine } : {}) });
+          navigate('/workout');
+        }}
+        onCreateRoutine={() => {
+          setTypePicker(false);
+          navigate('/routines');
+        }}
+      />
     </div>
   );
 }

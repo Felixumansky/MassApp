@@ -8,6 +8,7 @@ import ExercisePicker from '../components/ExercisePicker.jsx';
 import RestTimer from '../components/RestTimer.jsx';
 import WorkoutComplete from '../components/WorkoutComplete.jsx';
 import { fmtDuration, workoutVolume, epley1rm, vibrate, unitLabel, fmtWeight, dayKey } from '../lib/utils.js';
+import { lastSessionExercise, suggestNextSet } from '../lib/analytics.js';
 import { useDialogFocus } from '../lib/useDialogFocus.js';
 
 function workoutDisplayDuration(active) {
@@ -195,7 +196,7 @@ export default function ActiveWorkout() {
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ type: 'spring', stiffness: 320, damping: 30 }}
               >
-                <ExerciseCard ex={ex} unit={unit} priorBest={bestByExercise[ex.exerciseId] || 0} onToggle={toggleSet} dispatch={dispatch} />
+                <ExerciseCard ex={ex} unit={unit} workouts={state.workouts} priorBest={bestByExercise[ex.exerciseId] || 0} onToggle={toggleSet} dispatch={dispatch} />
               </motion.li>
             ))}
           </AnimatePresence>
@@ -278,12 +279,22 @@ function RetroWorkoutMeta({ active, dispatch }) {
 
 const setGridClass = 'grid grid-cols-1 gap-2 sm:grid-cols-[1.7rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_2.2rem] sm:items-center sm:gap-1.5';
 
-function ExerciseCard({ ex, unit, priorBest, onToggle, dispatch }) {
+function ExerciseCard({ ex, unit, workouts, priorBest, onToggle, dispatch }) {
   const doneCount = ex.sets.filter((s) => s.done).length;
+  const overload = useMemo(() => {
+    const last = lastSessionExercise(workouts, ex.exerciseId);
+    if (!last) return null;
+    const done = (last.sets || []).filter((s) => Number(s.reps) > 0);
+    if (!done.length) return null;
+    const top = done.reduce((a, b) => (epley1rm(b.weight, b.reps) > epley1rm(a.weight, a.reps) ? b : a));
+    const suggestion = suggestNextSet(last, ex.targetReps);
+    return { top, suggestion };
+  }, [workouts, ex.exerciseId, ex.targetReps]);
+
   return (
     <GlassCard className="min-w-0 overflow-hidden flex flex-col gap-3 p-3.5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2.5">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-2.5">
           <span className="font-bold">{ex.name}</span>
           <MuscleTag muscle={ex.muscle} />
         </div>
@@ -295,6 +306,18 @@ function ExerciseCard({ ex, unit, priorBest, onToggle, dispatch }) {
           <Trash2 className="size-4" />
         </button>
       </div>
+
+      {overload && (
+        <p className="tnum -mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-[var(--color-muted-foreground)]">
+          <span>פעם קודמת: <span className="font-bold text-[var(--color-card-foreground)]">{fmtWeight(overload.top.weight, unit) || '—'}{overload.top.weight ? ` ${unitLabel(unit)}` : ''} × {overload.top.reps}</span></span>
+          {overload.suggestion && (
+            <>
+              <span>·</span>
+              <span>יעד: <span className="font-bold" style={{ color: 'var(--color-volt)' }}>{fmtWeight(overload.suggestion.weight, unit) || '—'}{overload.suggestion.weight ? ` ${unitLabel(unit)}` : ''} × {overload.suggestion.reps}</span></span>
+            </>
+          )}
+        </p>
+      )}
 
       <div className={`${setGridClass} hidden text-[11px] font-semibold text-[var(--color-muted-foreground)] sm:grid`}>
         <span className="text-center">סט</span>

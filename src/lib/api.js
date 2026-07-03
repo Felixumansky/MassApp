@@ -40,3 +40,8 @@ export const api = {
   getState: (token) => req('/api/state', { token }),
   putState: (token, state) => req('/api/state', { method: 'PUT', token, body: state }),
 };
+
+// URL for an exercise demonstration GIF, proxied through MassAPI (keeps the
+// RapidAPI key server-side). Returns '' when the exercise has no media id.
+export const exerciseMediaUrl = (mediaId) =>
+  mediaId ? `${BASE}/api/exercise-media/${encodeURIComponent(mediaId)}` : '';

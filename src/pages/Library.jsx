@@ -1,17 +1,19 @@
 import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Dumbbell, Plus, X, Trash2 } from 'lucide-react';
-import { EXERCISES, MUSCLES } from '../lib/exercises.js';
+import { EXERCISES, MUSCLES, matchesExercise } from '../lib/exercises.js';
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, EmptyState } from '../components/ui.jsx';
 import { vibrate } from '../lib/utils.js';
 import { useDialogFocus } from '../lib/useDialogFocus.js';
+import ExerciseDetail from '../components/ExerciseDetail.jsx';
 
 export default function Library() {
   const { state, dispatch } = useStore();
   const [q, setQ] = useState('');
   const [muscle, setMuscle] = useState('all');
   const [creating, setCreating] = useState(false);
+  const [detail, setDetail] = useState(null);
 
   const custom = state.customExercises || [];
 
@@ -20,7 +22,7 @@ export default function Library() {
     const all = [...EXERCISES, ...custom];
     const filtered = all.filter((e) => {
       if (muscle !== 'all' && e.muscle !== muscle) return false;
-      if (needle && !e.name.includes(needle)) return false;
+      if (needle && !matchesExercise(e, needle)) return false;
       return true;
     });
     const byMuscle = {};
@@ -74,14 +76,26 @@ export default function Library() {
               <ul className="grid grid-cols-2 gap-2.5">
                 {g.items.map((e) => (
                   <li key={e.id}>
-                    <GlassCard className="flex h-full items-center gap-2 p-3">
+                    <GlassCard
+                      onClick={() => { vibrate(6); setDetail(e); }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); vibrate(6); setDetail(e); } }}
+                      className="press flex h-full cursor-pointer items-center gap-2 p-3"
+                    >
                       <span className="flex size-9 shrink-0 items-center justify-center rounded-xl" style={{ background: `${g.color}1f` }}>
                         <Dumbbell className="size-4" style={{ color: g.color }} />
                       </span>
-                      <span className="flex-1 text-sm font-semibold leading-tight">{e.name}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold leading-tight">{e.name}</span>
+                        {e.name_en && e.name_en !== e.name && (
+                          <span dir="ltr" className="block truncate text-start text-[11px] text-[var(--color-muted-foreground)]">{e.name_en}</span>
+                        )}
+                      </span>
                       {e.custom && (
                         <button
-                          onClick={() => {
+                          onClick={(ev) => {
+                            ev.stopPropagation();
                             if (!confirm(`למחוק את "${e.name}" מהספרייה?`)) return;
                             vibrate(8);
                             dispatch({ type: 'deleteCustomExercise', id: e.id });
@@ -106,6 +120,8 @@ export default function Library() {
         onClose={() => setCreating(false)}
         onCreate={(name, m) => { dispatch({ type: 'addCustomExercise', name, muscle: m }); setCreating(false); }}
       />
+
+      <ExerciseDetail exercise={detail} workouts={state.workouts} unit={state.profile.unit || 'kg'} onClose={() => setDetail(null)} />
     </div>
   );
 }

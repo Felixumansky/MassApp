@@ -1,19 +1,22 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
-import { Trophy, Dumbbell, Layers, Plus, Trash2 } from 'lucide-react';
+import { Trophy, Dumbbell, Layers, Plus, Trash2, Activity, Flame } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, EmptyState, AppLoader } from '../components/ui.jsx';
 import WorkoutHistoryList from '../components/WorkoutHistory.jsx';
 import { workoutVolume, epley1rm, shortDateHe, dayKey, vibrate, toUnit, fmtWeight, toKg, unitLabel } from '../lib/utils.js';
-import { muscleById } from '../lib/exercises.js';
+import { MUSCLES, muscleById } from '../lib/exercises.js';
+import { setsByMuscle, muscleSetStatus, HYPERTROPHY_MIN, HYPERTROPHY_MAX, hasAnyRpe, weeklyRpeStats } from '../lib/analytics.js';
 
 const VolumeChart = lazy(() => import('../components/ProgressCharts.jsx').then((m) => ({ default: m.VolumeChart })));
 const WeightChart = lazy(() => import('../components/ProgressCharts.jsx').then((m) => ({ default: m.WeightChart })));
+const RpeChart = lazy(() => import('../components/ProgressCharts.jsx').then((m) => ({ default: m.RpeChart })));
 
 export default function Progress() {
   const { state, dispatch } = useStore();
   const { workouts, bodyWeights, profile } = state;
   const unit = profile.unit || 'kg';
   const [volExId, setVolExId] = useState('all');
+  const [muscleRange, setMuscleRange] = useState('week');
 
   // Exercises that actually appear in logged workouts, for the volume picker.
   const volExercises = useMemo(() => {
@@ -56,6 +59,23 @@ export default function Progress() {
     () => bodyWeights.map((b) => ({ label: shortDateHe(b.date), weight: fmtWeight(b.weight, unit) })),
     [bodyWeights, unit]
   );
+
+  // Feature 1 — working sets per muscle group, this week or a 4‑week average.
+  const muscleBalance = useMemo(() => {
+    const weeks = muscleRange === 'avg4' ? 4 : 1;
+    const startKey = dayKey(new Date(Date.now() - (weeks * 7 - 1) * 864e5));
+    const raw = setsByMuscle(workouts, startKey, dayKey());
+    const maxSets = Math.max(HYPERTROPHY_MAX, ...Object.values(raw).map((n) => n / weeks));
+    return MUSCLES.map((m) => {
+      const sets = Math.round((raw[m.id] / weeks) * 10) / 10;
+      return { ...m, sets, status: muscleSetStatus(sets), pct: Math.min(100, (sets / maxSets) * 100), minPct: (HYPERTROPHY_MIN / maxSets) * 100, maxPct: (HYPERTROPHY_MAX / maxSets) * 100 };
+    });
+  }, [workouts, muscleRange]);
+
+  // Feature 4 — RPE / intensity analytics (only when any RPE was ever logged).
+  const showRpe = useMemo(() => hasAnyRpe(workouts), [workouts]);
+  const rpeWeekly = useMemo(() => (showRpe ? weeklyRpeStats(workouts, 8) : []), [workouts, showRpe]);
+  const rpeCurrent = rpeWeekly.at(-1);
 
   const prs = useMemo(() => {
     const best = {};
@@ -150,6 +170,33 @@ export default function Progress() {
         </Suspense>
       </GlassCard>
 
+      <MuscleBalanceCard data={muscleBalance} range={muscleRange} onRange={setMuscleRange} />
+
+      {showRpe && (
+        <GlassCard>
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="mb-1 flex items-center gap-1.5 font-bold">
+                <Flame className="size-4 text-[var(--color-amber)]" /> עצימות (RPE)
+              </h2>
+              <p className="text-xs text-[var(--color-muted-foreground)]">מגמת מאמץ ממוצע ב‑8 השבועות האחרונים</p>
+            </div>
+            {rpeCurrent && rpeCurrent.totalSets > 0 && (
+              <div className="text-end">
+                <p className="tnum text-lg font-extrabold leading-none" style={{ color: 'var(--color-amber)' }}>
+                  {rpeCurrent.hardSets}<span className="text-sm text-[var(--color-muted-foreground)]">/{rpeCurrent.totalSets}</span>
+                </p>
+                <p className="text-[11px] text-[var(--color-muted-foreground)]">סטים קשים השבוע</p>
+              </div>
+            )}
+          </div>
+          <Suspense fallback={<AppLoader label="טוען גרף…" />}>
+            <RpeChart data={rpeWeekly} />
+          </Suspense>
+          <p className="mt-2 text-center text-[11px] text-[var(--color-muted-foreground)]">סט "קשה" = RPE 7 ומעלה · מדד לנפח אפקטיבי לגירוי מסה</p>
+        </GlassCard>
+      )}
+
       <GlassCard>
         <div className="mb-3 flex items-center justify-between">
           <div>
@@ -196,6 +243,66 @@ export default function Progress() {
         </ul>
       </section>
     </div>
+  );
+}
+
+const STATUS_META = {
+  low: { label: 'נמוך', color: '#94a3b8' },
+  optimal: { label: 'מיטבי', color: 'var(--color-volt)' },
+  high: { label: 'גבוה', color: '#fb923c' },
+};
+
+function MuscleBalanceCard({ data, range, onRange }) {
+  const anySets = data.some((m) => m.sets > 0);
+  return (
+    <GlassCard>
+      <div className="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <h2 className="mb-1 flex items-center gap-1.5 font-bold">
+            <Activity className="size-4 text-[var(--color-volt)]" /> מאזן שרירים
+          </h2>
+          <p className="text-xs text-[var(--color-muted-foreground)]">סטים לקבוצת שריר · יעד היפרטרופיה {HYPERTROPHY_MIN}–{HYPERTROPHY_MAX}</p>
+        </div>
+        <select
+          value={range}
+          onChange={(e) => onRange(e.target.value)}
+          className="glass shrink-0 rounded-xl px-2.5 py-1.5 text-xs font-bold outline-none [color-scheme:dark]"
+          style={{ color: 'var(--color-foreground)' }}
+          aria-label="בחירת טווח למאזן שרירים"
+        >
+          <option value="week" style={{ background: '#15181d', color: '#e7ecf1' }}>השבוע</option>
+          <option value="avg4" style={{ background: '#15181d', color: '#e7ecf1' }}>ממוצע 4 שבועות</option>
+        </select>
+      </div>
+
+      {!anySets ? (
+        <p className="py-6 text-center text-sm text-[var(--color-muted-foreground)]">אין סטים בטווח הנבחר</p>
+      ) : (
+        <ul className="flex flex-col gap-2.5">
+          {data.map((m) => {
+            const st = STATUS_META[m.status];
+            return (
+              <li key={m.id} className="flex items-center gap-2.5">
+                <span className="w-16 shrink-0 text-xs font-semibold" style={{ color: m.color }}>{m.label}</span>
+                <div className="relative h-3 flex-1 overflow-hidden rounded-full bg-white/[0.05]">
+                  {/* hypertrophy target band 10–20 */}
+                  <span
+                    className="absolute inset-y-0 rounded-full bg-white/[0.06]"
+                    style={{ insetInlineStart: `${m.minPct}%`, width: `${Math.max(0, m.maxPct - m.minPct)}%` }}
+                  />
+                  <span
+                    className="absolute inset-y-0 rounded-full"
+                    style={{ insetInlineStart: 0, width: `${m.pct}%`, background: m.color, opacity: m.status === 'low' ? 0.45 : 0.9 }}
+                  />
+                </div>
+                <span className="tnum w-8 shrink-0 text-end text-sm font-bold">{m.sets}</span>
+                <span className="w-10 shrink-0 text-end text-[10px] font-bold" style={{ color: st.color }}>{st.label}</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </GlassCard>
   );
 }
 
