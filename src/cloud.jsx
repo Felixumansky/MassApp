@@ -173,13 +173,22 @@ export function CloudProvider({ children }) {
 
   function logout() {
     if (auth?.token) api.logout(auth.token);
+    // Cancel any in-flight/debounced pushes so a stale timer can't upload the
+    // about-to-be-cleared (seed) slice over the server's real data.
+    clearTimeout(pushTimer.current);
+    clearTimeout(retryTimer.current);
     ready.current = false;
+    dirty.current = false;
     persistAuth(null);
     clearUnlock();
     disableBiometric(); // nothing left to unlock
     setBioOn(false);
     setLocked(false);
     setStatus('idle');
+    // Wipe the local cache — otherwise this device keeps showing the logged-out
+    // user's workouts/routines (privacy on shared devices), and a stale copy can
+    // resurface a deleted workout that the cloud has already tombstoned.
+    dispatch({ type: 'resetAll' });
   }
 
   async function replaceCloudState(nextSlice) {
