@@ -66,9 +66,21 @@ export default function WorkoutHistoryList({ workouts, unit }) {
 }
 
 function WorkoutRow({ workout: w, unit, onEdit, onDelete }) {
+  const navigate = useNavigate();
   const muscles = [...new Set((w.exercises || []).map((e) => e.muscle))].slice(0, 3);
   return (
-    <GlassCard className="flex flex-col gap-2.5">
+    <GlassCard
+      className="flex cursor-pointer flex-col gap-2.5 transition-all active:scale-[0.98]"
+      onClick={() => navigate(`/workout/${w.id}`)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          navigate(`/workout/${w.id}`);
+        }
+      }}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate font-bold">{w.name || 'אימון'}</p>
@@ -79,14 +91,14 @@ function WorkoutRow({ workout: w, unit, onEdit, onDelete }) {
             <Clock className="size-3.5" /> {fmtDuration(w.durationSec)}
           </span>
           <button
-            onClick={onEdit}
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
             className="press flex size-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)]"
             aria-label="ערוך אימון"
           >
             <Pencil className="size-4" />
           </button>
           <button
-            onClick={onDelete}
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
             className="press flex size-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)]"
             aria-label="מחק אימון"
           >
