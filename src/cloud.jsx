@@ -42,46 +42,7 @@ function shouldLockSavedSession() {
   return !!(loadAuth() && biometricEnabled() && !unlockFresh());
 }
 
-function byId(items = []) {
-  const map = new Map();
-  for (const item of items || []) {
-    if (item?.id) map.set(item.id, item);
-  }
-  return map;
-}
-
-function mergeList(local = [], remote = []) {
-  return [...new Map([...byId(remote), ...byId(local)]).values()];
-}
-
-/** One body-weight entry per date: the local version wins over a stale server copy. */
-function mergeWeights(local = [], remote = [], isDeleted) {
-  const localByDate = new Map(local.map((b) => [b.date, b.id]));
-  const byDate = new Map();
-  for (const b of mergeList(local, remote)) {
-    if (isDeleted(b)) continue;
-    const preferredId = localByDate.get(b.date);
-    if (!byDate.has(b.date) || b.id === preferredId) byDate.set(b.date, b);
-  }
-  return [...byDate.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
-}
-
-function mergeSyncedState(local, remote = {}) {
-  // Union of tombstones from both sides, so a delete made on any device sticks
-  // instead of being resurrected by the id-union merge below.
-  const deletedIds = new Set([...(local.deletedIds || []), ...(remote.deletedIds || [])]);
-  const alive = (item) => !deletedIds.has(item.id);
-  return {
-    profile: Object.keys(remote.profile || {}).length ? { ...local.profile, ...remote.profile } : local.profile,
-    workouts: mergeList(local.workouts, remote.workouts).filter(alive).sort((a, b) => (a.date < b.date ? 1 : -1)),
-    routines: mergeList(local.routines, remote.routines).filter(alive),
-    bodyWeights: mergeWeights(local.bodyWeights, remote.bodyWeights, (b) => !alive(b)),
-    customExercises: mergeList(local.customExercises, remote.customExercises).filter(alive),
-    deletedIds: [...deletedIds].slice(-1000),
-  };
-}
-
-/** Cloud auth + merge-on-pull state sync layered on top of the local store. */
+/** Cloud auth + DB-backed state: pull the state from the server, push every change. */
 export function CloudProvider({ children }) {
   const { state, dispatch } = useStore();
   const [auth, setAuth] = useState(loadAuth); // { token, user, exp } | null
@@ -135,13 +96,18 @@ export function CloudProvider({ children }) {
       setError('');
       try {
         const { state: server, updatedAt } = await api.getState(token);
-        const local = latestSlice.current || slice;
-        if (updatedAt && (server.workouts?.length || server.routines?.length || server.bodyWeights?.length || server.customExercises?.length)) {
-          const merged = mergeSyncedState(local, server);
-          dispatch({ type: 'replaceAll', data: merged });
-          await api.putState(token, merged);
+        const hasServerData =
+          updatedAt &&
+          (server.workouts?.length ||
+            server.routines?.length ||
+            server.bodyWeights?.length ||
+            server.customExercises?.length);
+        if (hasServerData) {
+          // The DB is the single source of truth — mirror it exactly, no local merge.
+          dispatch({ type: 'replaceAll', data: server });
         } else {
-          await api.putState(token, local);
+          // Empty account: seed the DB from the current in-memory (starter) state.
+          await api.putState(token, latestSlice.current || slice);
         }
         markReady();
         setStatus('synced');

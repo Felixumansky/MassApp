@@ -1,8 +1,6 @@
-import { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
+import { createContext, useContext, useMemo, useReducer } from 'react';
 import { uid, dayKey } from './lib/utils.js';
 import { resolveExercise, routineExerciseId, routineExerciseTargets } from './lib/exercises.js';
-
-export const STORAGE_KEY = 'liftlog.v2';
 
 /** Resolve an exercise id from the built-in library OR the user's custom ones. */
 function findEx(state, id) {
@@ -105,25 +103,6 @@ export function seed() {
 /** Remember deleted ids so cloud merge won't resurrect them from the server. */
 function tombstone(state, ...ids) {
   return [...(state.deletedIds || []), ...ids].slice(-1000);
-}
-
-function load() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return {
-        ...seed(),
-        ...parsed,
-        profile: normalizeProfile(parsed.profile),
-        // Never restore a running timer across reloads; keep the saved duration.
-        restTimer: { open: false, seconds: parsed.restTimer?.seconds ?? 90 },
-      };
-    }
-  } catch {
-    /* ignore */
-  }
-  return seed();
 }
 
 export function reducer(state, action) {
@@ -529,15 +508,10 @@ export function reducer(state, action) {
 const Ctx = createContext(null);
 
 export function StoreProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, undefined, load);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    } catch {
-      /* quota / private mode */
-    }
-  }, [state]);
+  // In-memory only — the DB is the single source of truth. Nothing about the
+  // user's data is cached in localStorage; the cloud layer pulls the state on
+  // login and pushes every change straight to the server.
+  const [state, dispatch] = useReducer(reducer, undefined, seed);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
