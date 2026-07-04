@@ -454,6 +454,24 @@ export function reducer(state, action) {
         deletedIds: tombstone(state, action.id),
       };
 
+    case 'updateBodyWeight': {
+      const entry = state.bodyWeights.find((b) => b.id === action.id);
+      if (!entry) return state;
+      const newDate = action.date ?? entry.date;
+      const newWeight = action.weight != null ? Number(action.weight) : entry.weight;
+      // If the date changed, remove any existing entry on the target date
+      // (the updated entry takes its place).
+      const rest = state.bodyWeights.filter(
+        (b) => b.id !== action.id && b.date !== newDate
+      );
+      return {
+        ...state,
+        bodyWeights: [...rest, { id: entry.id, date: newDate, weight: newWeight }].sort(
+          (a, b) => (a.date < b.date ? -1 : 1)
+        ),
+      };
+    }
+
     case 'addCustomExercise': {
       const id = 'cx-' + uid();
       const ex = { id, name: action.name.trim(), muscle: action.muscle, custom: true };

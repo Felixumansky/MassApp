@@ -1,9 +1,11 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Scale, TrendingDown, TrendingUp, Minus, Trash2 } from 'lucide-react';
+import { ChevronRight, Pencil, Scale, TrendingDown, TrendingUp, Minus, Trash2, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, EmptyState, AppLoader, UnitToggle } from '../components/ui.jsx';
-import { shortDateHe, formatDateHe, dayKey, vibrate, fmtWeight, toKg, unitLabel, otherUnit } from '../lib/utils.js';
+import { shortDateHe, formatDateHe, dayKey, vibrate, fmtWeight, toKg, toUnit, unitLabel, otherUnit } from '../lib/utils.js';
+import { useDialogFocus } from '../lib/useDialogFocus.js';
 
 const WeightChart = lazy(() => import('../components/ProgressCharts.jsx').then((m) => ({ default: m.WeightChart })));
 
@@ -30,6 +32,15 @@ export default function Weight() {
       sinceStart: sorted.length > 1 ? latest.weight - first.weight : null,
     };
   }, [sorted]);
+
+  const [editing, setEditing] = useState(null);   // body weight entry being edited
+  const [deleting, setDeleting] = useState(null);  // body weight entry pending delete
+
+  function handleDelete(entry) {
+    vibrate(8);
+    dispatch({ type: 'deleteBodyWeight', id: entry.id });
+    setDeleting(null);
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -81,7 +92,18 @@ export default function Weight() {
             <ul className="flex flex-col gap-2">
               {[...sorted].reverse().map((b) => (
                 <li key={b.id}>
-                  <GlassCard className="flex items-center gap-3 p-3">
+                  <GlassCard
+                    className="flex cursor-pointer items-center gap-3 p-3 transition-all active:scale-[0.98]"
+                    onClick={() => setEditing(b)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setEditing(b);
+                      }
+                    }}
+                  >
                     <div className="flex-1">
                       <p className="text-sm font-bold">{formatDateHe(b.date)}</p>
                     </div>
@@ -91,13 +113,22 @@ export default function Weight() {
                       </span>
                       <span className="tnum text-[10px] font-semibold text-[var(--color-muted-foreground)]">{fmtWeight(b.weight, 'lb')} lb</span>
                     </span>
-                    <button
-                      onClick={() => { vibrate(8); dispatch({ type: 'deleteBodyWeight', id: b.id }); }}
-                      className="press text-[var(--color-muted-foreground)]"
-                      aria-label="מחק שקילה"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEditing(b); }}
+                        className="press flex size-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)]"
+                        aria-label="ערוך שקילה"
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleting(b); }}
+                        className="press flex size-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)]"
+                        aria-label="מחק שקילה"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                    </div>
                   </GlassCard>
                 </li>
               ))}
@@ -105,6 +136,24 @@ export default function Weight() {
           </section>
         </>
       )}
+
+      {/* Edit sheet */}
+      <EditWeightSheet
+        entry={editing}
+        onClose={() => setEditing(null)}
+        onSave={(id, weight, date) => {
+          vibrate(8);
+          dispatch({ type: 'updateBodyWeight', id, weight, date });
+          setEditing(null);
+        }}
+      />
+
+      {/* Delete confirmation */}
+      <ConfirmDeleteSheet
+        entry={deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => handleDelete(deleting)}
+      />
     </div>
   );
 }
@@ -164,5 +213,148 @@ function AddWeightForm({ onAdd }) {
         <p className="tnum text-end text-[11px] font-semibold text-[var(--color-muted-foreground)]">≈ {otherVal} {unitLabel(other)}</p>
       )}
     </form>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   EditWeightSheet — bottom sheet for editing an existing body weight entry.
+   ═══════════════════════════════════════════════════════════════════════ */
+function EditWeightSheet({ entry, onClose, onSave }) {
+  if (!entry) return null;
+  return <EditWeightSheetInner key={entry.id} entry={entry} onClose={onClose} onSave={onSave} />;
+}
+
+function EditWeightSheetInner({ entry, onClose, onSave }) {
+  const [unit, setUnit] = useState('kg');
+  const [val, setVal] = useState(() => String(fmtWeight(entry.weight, 'kg')));
+  const [date, setDate] = useState(entry.date);
+  const today = dayKey();
+  const other = otherUnit(unit);
+  const otherVal = val === '' ? '' : fmtWeight(toKg(val, unit), other);
+  const dialogRef = useDialogFocus(true, onClose);
+
+  function submit(e) {
+    e.preventDefault();
+    if (!val) return;
+    onSave(entry.id, toKg(val, unit), date);
+  }
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+      />
+      <motion.form
+        ref={dialogRef}
+        onSubmit={submit}
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+        className="solid shadow-[var(--shadow-overlay)] fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md flex-col gap-3 rounded-t-2xl p-5 pb-[max(1.25rem,var(--safe-b))]"
+        role="dialog" aria-modal="true" aria-label="עריכת שקילה"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-bold">עריכת שקילה</h2>
+          <button type="button" onClick={onClose} className="press glass flex size-9 items-center justify-center rounded-xl" aria-label="סגור">
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <label className="flex flex-col gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
+          תאריך
+          <input
+            type="date"
+            value={date}
+            max={today}
+            onChange={(e) => setDate(e.target.value)}
+            className="tnum glass rounded-2xl px-4 py-3 text-sm font-bold text-[var(--color-card-foreground)] outline-none [color-scheme:dark]"
+            required
+          />
+        </label>
+
+        <label className="flex flex-col gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
+          <span className="flex items-center justify-between">
+            משקל
+            <UnitToggle unit={unit} onChange={(u) => {
+              // Convert the current value to the new unit for display
+              if (val !== '') {
+                const kg = toKg(val, unit);
+                setVal(String(fmtWeight(kg, u)));
+              }
+              vibrate(5);
+              setUnit(u);
+            }} />
+          </span>
+          <input
+            type="number"
+            inputMode="decimal"
+            step="0.1"
+            value={val}
+            onChange={(e) => setVal(e.target.value)}
+            placeholder={unitLabel(unit)}
+            className="tnum glass rounded-2xl px-4 py-3 text-sm font-bold text-[var(--color-card-foreground)] outline-none"
+            required
+          />
+          {otherVal !== '' && (
+            <span className="tnum text-end text-[10px] font-semibold text-[var(--color-muted-foreground)]">
+              ≈ {otherVal} {unitLabel(other)}
+            </span>
+          )}
+        </label>
+
+        <button type="submit" className="btn-volt press mt-1 rounded-2xl py-3.5 text-sm font-bold">
+          שמור שינויים
+        </button>
+      </motion.form>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ConfirmDeleteSheet — confirmation dialog before deleting a weight entry.
+   ═══════════════════════════════════════════════════════════════════════ */
+function ConfirmDeleteSheet({ entry, onClose, onConfirm }) {
+  const dialogRef = useDialogFocus(!!entry, onClose);
+  return (
+    <AnimatePresence>
+      {entry && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+          />
+          <motion.div
+            ref={dialogRef}
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 340, damping: 32 }}
+            className="solid shadow-[var(--shadow-overlay)] fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md rounded-t-2xl p-5 pb-[max(1.25rem,var(--safe-b))]"
+            role="dialog"
+            aria-modal="true"
+          >
+            <h3 className="mb-1 text-lg font-bold">למחוק שקילה?</h3>
+            <p className="mb-4 text-sm text-[var(--color-muted-foreground)]">
+              השקילה מ-{formatDateHe(entry.date)} ({fmtWeight(entry.weight, 'kg')} ק״ג) תימחק לצמיתות.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="press glass flex-1 rounded-2xl py-3 text-sm font-bold">
+                ביטול
+              </button>
+              <button
+                onClick={onConfirm}
+                className="press flex-1 rounded-2xl bg-rose-500/90 py-3 text-sm font-bold text-white"
+              >
+                מחק
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }

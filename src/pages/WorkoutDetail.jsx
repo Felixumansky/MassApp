@@ -62,6 +62,7 @@ export default function WorkoutDetail() {
   const [draft, setDraft] = useState(null); // deep clone while editing
   const [picker, setPicker] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   // Start editing: deep-clone the workout so we can freely mutate
   function startEdit() {
@@ -69,7 +70,23 @@ export default function WorkoutDetail() {
     setEditing(true);
   }
 
+  /** Check if the draft differs from the saved workout. */
+  function isDirty() {
+    if (!draft || !workout) return false;
+    return JSON.stringify(draft) !== JSON.stringify(workout);
+  }
+
   function cancelEdit() {
+    if (isDirty()) {
+      setConfirmDiscard(true);
+      return;
+    }
+    setDraft(null);
+    setEditing(false);
+  }
+
+  function forceDiscard() {
+    setConfirmDiscard(false);
     setDraft(null);
     setEditing(false);
   }
@@ -339,6 +356,13 @@ export default function WorkoutDetail() {
         name={workout.name}
         onClose={() => setConfirmDelete(false)}
         onConfirm={handleDelete}
+      />
+
+      {/* ── Discard changes confirmation ─────────────────────── */}
+      <ConfirmDiscardDialog
+        open={confirmDiscard}
+        onClose={() => setConfirmDiscard(false)}
+        onDiscard={forceDiscard}
       />
     </div>
   );
@@ -764,6 +788,51 @@ function ConfirmDeleteDialog({ open, name, onClose, onConfirm }) {
                 className="press flex-1 rounded-2xl bg-rose-500/90 py-3 text-sm font-bold text-white"
               >
                 מחק
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function ConfirmDiscardDialog({ open, onClose, onDiscard }) {
+  const dialogRef = useDialogFocus(open, onClose);
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+          />
+          <motion.div
+            ref={dialogRef}
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 340, damping: 32 }}
+            className="solid shadow-[var(--shadow-overlay)] fixed inset-x-0 bottom-0 z-50 mx-auto max-w-md rounded-t-2xl p-5 pb-[max(1.25rem,var(--safe-b))]"
+            role="dialog"
+            aria-modal="true"
+          >
+            <h3 className="mb-1 text-lg font-bold">לצאת ללא שמירה?</h3>
+            <p className="mb-4 text-sm text-[var(--color-muted-foreground)]">
+              יש שינויים שלא נשמרו. אם תצא עכשיו, השינויים יאבדו.
+            </p>
+            <div className="flex gap-2">
+              <button onClick={onClose} className="press glass flex-1 rounded-2xl py-3 text-sm font-bold">
+                המשך עריכה
+              </button>
+              <button
+                onClick={onDiscard}
+                className="press flex-1 rounded-2xl bg-rose-500/90 py-3 text-sm font-bold text-white"
+              >
+                צא ללא שמירה
               </button>
             </div>
           </motion.div>
