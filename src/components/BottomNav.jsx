@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, CalendarDays, Dumbbell, ClipboardList, TrendingUp, Plus } from 'lucide-react';
+import { Home, CalendarDays, Dumbbell, ClipboardList, TrendingUp, Plus, TimerOff } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import StartWorkoutSheet from './StartWorkoutSheet.jsx';
 import { vibrate } from '../lib/utils.js';
@@ -17,8 +17,16 @@ export default function BottomNav() {
   const { state, dispatch } = useStore();
   const navigate = useNavigate();
   const [typePicker, setTypePicker] = useState(false);
+  const timerRunning = !!state.restTimer?.open;
 
   function startOrResume() {
+    // Mid-workout, while the rest timer is running, the + turns into a stop
+    // button: one tap stops the timer and closes it instead of navigating.
+    if (timerRunning) {
+      vibrate(12);
+      dispatch({ type: 'closeRestTimer' });
+      return;
+    }
     vibrate(8);
     if (state.active) {
       navigate('/workout');
@@ -39,11 +47,15 @@ export default function BottomNav() {
 
       <button
         onClick={startOrResume}
-        className="btn-volt press relative -mt-7 flex size-14 shrink-0 items-center justify-center rounded-full"
-        aria-label={state.active ? 'המשך אימון' : 'התחל אימון'}
+        className={`press relative -mt-7 flex size-14 shrink-0 items-center justify-center rounded-full ${timerRunning ? 'bg-rose-500 text-white shadow-[0_8px_24px_rgba(244,63,94,0.45)]' : 'btn-volt'}`}
+        aria-label={timerRunning ? 'עצור טיימר' : state.active ? 'המשך אימון' : 'התחל אימון'}
       >
-        <Plus className="size-7" strokeWidth={2.6} />
-        {state.active && (
+        {timerRunning ? (
+          <TimerOff className="size-7" strokeWidth={2.6} />
+        ) : (
+          <Plus className="size-7" strokeWidth={2.6} />
+        )}
+        {state.active && !timerRunning && (
           <span className="absolute -end-0.5 -top-0.5 size-3.5 rounded-full bg-rose-500 ring-2 ring-[#07090a] pulse-glow" />
         )}
       </button>

@@ -2,32 +2,71 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Timer, X, Plus, Minus } from 'lucide-react';
 import { fmtDuration, vibrate } from '../lib/utils.js';
+import { scheduleRestEnd, cancelRestEnd } from '../lib/restNotify.js';
 
 const PRESETS = [60, 90, 120, 180];
+const FINISH_PATTERN = [900, 80, 900, 80, 900];
 
-/** Bottom-docked rest timer. Counts down, buzzes on finish. */
+/** Bottom-docked rest timer. Counts down, buzzes on finish — even in the background. */
 export default function RestTimer({ open, seconds, onClose, onChangeSeconds }) {
   const [remaining, setRemaining] = useState(seconds);
   const tick = useRef(null);
 
   useEffect(() => {
-    if (!open) return;
-    setRemaining(seconds);
-  }, [open, seconds]);
+    if (!open) {
+      cancelRestEnd();
+      return undefined;
+    }
 
-  useEffect(() => {
-    if (!open) return undefined;
-    tick.current = setInterval(() => {
-      setRemaining((r) => {
-        if (r <= 1) {
-          clearInterval(tick.current);
-          vibrate([900, 80, 900, 80, 900]);
-          return 0;
+    // Drive the countdown off an absolute end time so it stays accurate across
+    // backgrounding (JS timers are throttled/frozen while the app is hidden).
+    const endAt = Date.now() + seconds * 1000;
+    let finished = false;
+    let osOwnsBuzz = false; // OS notification scheduled -> it delivers the finish buzz
+    setRemaining(seconds);
+
+    const step = () => {
+      const r = Math.round((endAt - Date.now()) / 1000);
+      if (r <= 0) {
+        clearInterval(tick.current);
+        setRemaining(0);
+        if (!finished) {
+          finished = true;
+          // Only buzz in-app if the OS hasn't already handled it in the background.
+          if (document.visibilityState === 'visible' && !osOwnsBuzz) vibrate(FINISH_PATTERN);
         }
-        return r - 1;
-      });
-    }, 1000);
-    return () => clearInterval(tick.current);
+        cancelRestEnd();
+        return;
+      }
+      setRemaining(r);
+    };
+
+    const onVisibility = () => {
+      if (finished) return;
+      if (document.visibilityState === 'hidden') {
+        // App is leaving the foreground — hand the finish buzz to the OS.
+        osOwnsBuzz = true;
+        scheduleRestEnd(endAt);
+      } else {
+        // Back in the foreground: JS drives the buzz again, catch up immediately.
+        osOwnsBuzz = false;
+        cancelRestEnd();
+        step();
+      }
+    };
+
+    tick.current = setInterval(step, 250);
+    document.addEventListener('visibilitychange', onVisibility);
+    if (document.visibilityState === 'hidden') {
+      osOwnsBuzz = true;
+      scheduleRestEnd(endAt);
+    }
+
+    return () => {
+      clearInterval(tick.current);
+      document.removeEventListener('visibilitychange', onVisibility);
+      cancelRestEnd();
+    };
   }, [open, seconds]);
 
   const pct = seconds > 0 ? (remaining / seconds) * 100 : 0;

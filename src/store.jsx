@@ -32,6 +32,7 @@ function prefillExercises(prev) {
     targetSets: e.sets.length || e.targetSets || 1,
     targetReps: e.targetReps ?? '',
     note: e.note || '',
+    ...(e.photo ? { photo: e.photo } : null),
     sets: e.sets.map((s) => ({ id: uid(), reps: s.reps, weight: s.weight, rpe: '', done: false })),
   }));
 }
@@ -95,6 +96,9 @@ export function seed() {
     customExercises: [],
     deletedIds: [],
     active: null,
+    // Bottom-docked rest timer. `open` is session-only UI state (reset on load);
+    // `seconds` persists so the user's last chosen duration sticks.
+    restTimer: { open: false, seconds: 90 },
   };
 }
 
@@ -108,7 +112,13 @@ function load() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return { ...seed(), ...parsed, profile: normalizeProfile(parsed.profile) };
+      return {
+        ...seed(),
+        ...parsed,
+        profile: normalizeProfile(parsed.profile),
+        // Never restore a running timer across reloads; keep the saved duration.
+        restTimer: { open: false, seconds: parsed.restTimer?.seconds ?? 90 },
+      };
     }
   } catch {
     /* ignore */
@@ -223,6 +233,7 @@ export function reducer(state, action) {
               targetSets: sets.length,
               targetReps: prevEx?.targetReps ?? '',
               note: prevEx?.note ?? '',
+              ...(prevEx?.photo ? { photo: prevEx.photo } : null),
               sets,
             },
           ],
@@ -328,6 +339,18 @@ export function reducer(state, action) {
         },
       };
 
+    case 'updateExerciseName':
+      if (!state.active) return state;
+      return {
+        ...state,
+        active: {
+          ...state.active,
+          exercises: state.active.exercises.map((e) =>
+            e.uid === action.uid ? { ...e, name: action.name } : e
+          ),
+        },
+      };
+
     case 'editWorkout': {
       // Reopen a saved workout for full editing. The original stays in history
       // until finishWorkout replaces it (same id), so discarding loses nothing.
@@ -384,12 +407,25 @@ export function reducer(state, action) {
       return {
         ...state,
         active: null,
+        restTimer: { ...(state.restTimer || { seconds: 90 }), open: false },
         workouts: [finished, ...state.workouts.filter((w) => w.id !== finished.id)].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
       };
     }
 
+    case 'openRestTimer':
+      return {
+        ...state,
+        restTimer: { open: true, seconds: action.seconds ?? state.restTimer?.seconds ?? 90 },
+      };
+
+    case 'setRestSeconds':
+      return { ...state, restTimer: { open: true, seconds: action.seconds } };
+
+    case 'closeRestTimer':
+      return { ...state, restTimer: { ...(state.restTimer || { seconds: 90 }), open: false } };
+
     case 'discardWorkout':
-      return { ...state, active: null };
+      return { ...state, active: null, restTimer: { ...(state.restTimer || { seconds: 90 }), open: false } };
 
     case 'deleteWorkout':
       return {

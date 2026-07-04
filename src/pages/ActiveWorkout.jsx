@@ -30,7 +30,7 @@ export default function ActiveWorkout() {
 
   const [picker, setPicker] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [rest, setRest] = useState({ open: false, seconds: 90 });
+  const rest = state.restTimer || { open: false, seconds: 90 };
   const [confirmFinish, setConfirmFinish] = useState(false);
   const [completed, setCompleted] = useState(null);
   const [finishError, setFinishError] = useState('');
@@ -99,7 +99,7 @@ export default function ActiveWorkout() {
     dispatch({ type: 'updateSet', uid: exUid, setId: set.id, patch: { done: next } });
     if (next) {
       vibrate(12);
-      setRest((r) => ({ ...r, open: true }));
+      dispatch({ type: 'openRestTimer' });
     }
   }
 
@@ -251,8 +251,8 @@ export default function ActiveWorkout() {
       <RestTimer
         open={rest.open}
         seconds={rest.seconds}
-        onChangeSeconds={(s) => setRest((r) => ({ ...r, seconds: s, open: true }))}
-        onClose={() => setRest((r) => ({ ...r, open: false }))}
+        onChangeSeconds={(s) => dispatch({ type: 'setRestSeconds', seconds: s })}
+        onClose={() => dispatch({ type: 'closeRestTimer' })}
       />
 
       <ConfirmSheet
@@ -319,6 +319,7 @@ function ExerciseCard({ ex, unit, onUnitChange, workouts, priorBest, onToggle, d
   const doneCount = ex.sets.filter((s) => s.done).length;
   const allDone = ex.sets.length > 0 && doneCount === ex.sets.length;
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const [showMore, setShowMore] = useState(false);
   const [lightbox, setLightbox] = useState(false);
   const fileRef = useRef(null);
 
@@ -365,9 +366,37 @@ function ExerciseCard({ ex, unit, onUnitChange, workouts, priorBest, onToggle, d
         }}
         className="flex cursor-pointer items-center justify-between gap-2"
       >
-        <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-2.5">
-          <span className="font-bold text-[var(--color-amber)]">{ex.name}</span>
-          <MuscleTag muscle={ex.muscle} />
+        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+          {ex.photo && (
+            <div className="relative shrink-0">
+              <button
+                onClick={(e) => { e.stopPropagation(); setLightbox(true); }}
+                className="press block overflow-hidden rounded-lg border border-[var(--hairline)]"
+                aria-label="הגדל תמונה"
+              >
+                <img src={ex.photo} alt={`תמונה — ${ex.name}`} className="size-11 object-cover" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); dispatch({ type: 'updateExercisePhoto', uid: ex.uid, photo: null }); }}
+                className="press absolute -end-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-black/70 text-white"
+                aria-label="הסר תמונה"
+              >
+                <X className="size-3" />
+              </button>
+            </div>
+          )}
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2.5">
+            <input
+              value={ex.name}
+              onChange={(e) => dispatch({ type: 'updateExerciseName', uid: ex.uid, name: e.target.value })}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              placeholder="שם התרגיל"
+              aria-label="שם התרגיל"
+              className="min-w-0 rounded-md bg-transparent px-1 py-0.5 font-bold text-[var(--color-amber)] outline-none focus:bg-white/[0.06] sm:flex-1"
+            />
+            <MuscleTag muscle={ex.muscle} />
+          </div>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <span className={`tnum flex items-center gap-1 text-xs font-bold ${allDone ? 'text-[var(--color-volt)]' : 'text-[var(--color-muted-foreground)]'}`}>
@@ -401,18 +430,6 @@ function ExerciseCard({ ex, unit, onUnitChange, workouts, priorBest, onToggle, d
               <span>יחידת המכשיר</span>
               <UnitToggle unit={unit} onChange={(u) => { vibrate(5); onUnitChange(u); }} />
             </div>
-
-            {overload && (
-              <p className="tnum -mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-[var(--color-muted-foreground)]">
-                <span>פעם קודמת: <span className="font-bold text-[var(--color-card-foreground)]">{overload.top.weight ? fmtWeightBoth(overload.top.weight, unit) : '—'} × {overload.top.reps}</span></span>
-                {overload.suggestion && (
-                  <>
-                    <span>·</span>
-                    <span>יעד: <span className="font-bold" style={{ color: 'var(--color-volt)' }}>{overload.suggestion.weight ? fmtWeightBoth(overload.suggestion.weight, unit) : '—'} × {overload.suggestion.reps}</span></span>
-                  </>
-                )}
-              </p>
-            )}
 
             <div className={`${setGridClass} hidden text-[11px] font-semibold text-[var(--color-muted-foreground)] sm:grid`}>
               <span className="text-center">סט</span>
@@ -485,64 +502,78 @@ function ExerciseCard({ ex, unit, onUnitChange, workouts, priorBest, onToggle, d
               </div>
             ))}
 
-            {ex.photo && (
-              <div className="relative self-start">
-                <button
-                  onClick={() => setLightbox(true)}
-                  className="press block overflow-hidden rounded-xl border border-[var(--hairline)]"
-                  aria-label="הגדל תמונה"
-                >
-                  <img src={ex.photo} alt={`תמונה — ${ex.name}`} className="size-16 object-cover" />
-                </button>
-                <button
-                  onClick={() => dispatch({ type: 'updateExercisePhoto', uid: ex.uid, photo: null })}
-                  className="press absolute -end-1.5 -top-1.5 flex size-5 items-center justify-center rounded-full bg-black/70 text-white"
-                  aria-label="הסר תמונה"
-                >
-                  <X className="size-3" />
-                </button>
-              </div>
-            )}
+            <button
+              onClick={() => setShowMore((v) => !v)}
+              aria-expanded={showMore}
+              className="press flex items-center justify-center gap-1 rounded-xl bg-white/5 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
+            >
+              <ChevronDown className={`size-3.5 transition-transform ${showMore ? 'rotate-180' : ''}`} />
+              {showMore ? 'הסתר עוד' : 'עוד'}
+            </button>
 
-            <label className="flex items-start gap-2 rounded-xl bg-white/[0.035] px-3 py-2 text-xs text-[var(--color-muted-foreground)]">
-              <StickyNote className="mt-0.5 size-4 shrink-0" />
-              <textarea
-                value={ex.note || ''}
-                onChange={(e) => dispatch({ type: 'updateExerciseNote', uid: ex.uid, note: e.target.value })}
-                placeholder="הערה לתרגיל"
-                rows={1}
-                className="min-h-6 flex-1 resize-none bg-transparent text-sm font-semibold text-[var(--color-card-foreground)] outline-none placeholder:font-normal placeholder:text-[var(--color-muted-foreground)]"
-              />
-            </label>
-
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <button
-                onClick={() => dispatch({ type: 'addSet', uid: ex.uid })}
-                className="press flex-1 rounded-xl bg-white/5 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
-              >
-                + סט
-              </button>
-              <button
-                onClick={() => dispatch({ type: 'duplicateSet', uid: ex.uid, setId: ex.sets.at(-1).id })}
-                className="press flex items-center justify-center gap-1 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
-              >
-                <Copy className="size-3.5" /> שכפל
-              </button>
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="press flex items-center justify-center gap-1 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
-              >
-                <Camera className="size-3.5" /> תמונה
-              </button>
-              {ex.sets.length > 1 && (
-                <button
-                  onClick={() => dispatch({ type: 'removeSet', uid: ex.uid, setId: ex.sets.at(-1).id })}
-                  className="press rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
+            <AnimatePresence initial={false}>
+              {showMore && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.22 }}
+                  className="flex flex-col gap-3 overflow-hidden"
                 >
-                  − סט
-                </button>
+                  {overload && (
+                    <p className="tnum flex flex-wrap items-center gap-x-1.5 text-xs text-[var(--color-muted-foreground)]">
+                      <span>פעם קודמת: <span className="font-bold text-[var(--color-card-foreground)]">{overload.top.weight ? fmtWeightBoth(overload.top.weight, unit) : '—'} × {overload.top.reps}</span></span>
+                      {overload.suggestion && (
+                        <>
+                          <span>·</span>
+                          <span>יעד: <span className="font-bold" style={{ color: 'var(--color-volt)' }}>{overload.suggestion.weight ? fmtWeightBoth(overload.suggestion.weight, unit) : '—'} × {overload.suggestion.reps}</span></span>
+                        </>
+                      )}
+                    </p>
+                  )}
+
+                  <label className="flex items-start gap-2 rounded-xl bg-white/[0.035] px-3 py-2 text-xs text-[var(--color-muted-foreground)]">
+                    <StickyNote className="mt-0.5 size-4 shrink-0" />
+                    <textarea
+                      value={ex.note || ''}
+                      onChange={(e) => dispatch({ type: 'updateExerciseNote', uid: ex.uid, note: e.target.value })}
+                      placeholder="הערה לתרגיל"
+                      rows={1}
+                      className="min-h-6 flex-1 resize-none bg-transparent text-sm font-semibold text-[var(--color-card-foreground)] outline-none placeholder:font-normal placeholder:text-[var(--color-muted-foreground)]"
+                    />
+                  </label>
+
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <button
+                      onClick={() => dispatch({ type: 'addSet', uid: ex.uid })}
+                      className="press flex-1 rounded-xl bg-white/5 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
+                    >
+                      + סט
+                    </button>
+                    <button
+                      onClick={() => dispatch({ type: 'duplicateSet', uid: ex.uid, setId: ex.sets.at(-1).id })}
+                      className="press flex items-center justify-center gap-1 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
+                    >
+                      <Copy className="size-3.5" /> שכפל
+                    </button>
+                    <button
+                      onClick={() => fileRef.current?.click()}
+                      className="press flex items-center justify-center gap-1 rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
+                    >
+                      <Camera className="size-3.5" /> {ex.photo ? 'החלף תמונה' : 'תמונה'}
+                    </button>
+                    {ex.sets.length > 1 && (
+                      <button
+                        onClick={() => dispatch({ type: 'removeSet', uid: ex.uid, setId: ex.sets.at(-1).id })}
+                        className="press rounded-xl bg-white/5 px-3 py-2 text-xs font-bold text-[var(--color-muted-foreground)]"
+                      >
+                        − סט
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
               )}
-            </div>
+            </AnimatePresence>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pickPhoto} />
           </motion.div>
         )}
