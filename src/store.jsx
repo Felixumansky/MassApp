@@ -92,6 +92,9 @@ export function seed() {
     workouts: [],
     bodyWeights: [],
     customExercises: [],
+    // Persistent user-uploaded image per exercise, keyed by exerciseId
+    // ({ [exerciseId]: <jpeg dataURL> }). Shown in the library + detail sheet.
+    exerciseImages: {},
     deletedIds: [],
     active: null,
     // Bottom-docked rest timer. `open` is session-only UI state (reset on load);
@@ -125,6 +128,7 @@ export function reducer(state, action) {
         routines: action.data.routines || [],
         bodyWeights: action.data.bodyWeights || [],
         customExercises: action.data.customExercises || [],
+        exerciseImages: action.data.exerciseImages || state.exerciseImages || {},
         deletedIds: action.data.deletedIds || state.deletedIds || [],
       };
 
@@ -497,8 +501,26 @@ export function reducer(state, action) {
       return {
         ...state,
         customExercises: (state.customExercises || []).filter((e) => e.id !== action.id),
+        exerciseImages: (() => {
+          const next = { ...(state.exerciseImages || {}) };
+          delete next[action.id];
+          return next;
+        })(),
         deletedIds: tombstone(state, action.id),
       };
+
+    case 'setExerciseImage':
+      if (!action.id || !action.dataUrl) return state;
+      return {
+        ...state,
+        exerciseImages: { ...(state.exerciseImages || {}), [action.id]: action.dataUrl },
+      };
+
+    case 'removeExerciseImage': {
+      const next = { ...(state.exerciseImages || {}) };
+      delete next[action.id];
+      return { ...state, exerciseImages: next };
+    }
 
     default:
       return state;

@@ -16,6 +16,7 @@ export default function Library() {
   const [detail, setDetail] = useState(null);
 
   const custom = state.customExercises || [];
+  const images = state.exerciseImages || {};
 
   const groups = useMemo(() => {
     const needle = q.trim();
@@ -83,9 +84,17 @@ export default function Library() {
                       onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); vibrate(6); setDetail(e); } }}
                       className="press flex h-full cursor-pointer items-center gap-2 p-3"
                     >
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl" style={{ background: `${g.color}1f` }}>
-                        <Dumbbell className="size-4" style={{ color: g.color }} />
-                      </span>
+                      {images[e.id] ? (
+                        <img
+                          src={images[e.id]}
+                          alt={e.name}
+                          className="size-9 shrink-0 rounded-xl object-cover"
+                        />
+                      ) : (
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl" style={{ background: `${g.color}1f` }}>
+                          <Dumbbell className="size-4" style={{ color: g.color }} />
+                        </span>
+                      )}
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold leading-tight">{e.name}</span>
                         {e.name_en && e.name_en !== e.name && (

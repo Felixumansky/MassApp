@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, Pencil, Trash2, X, Dumbbell } from 'lucide-react';
+import { Clock, Pencil, Trash2, X, Dumbbell, ClipboardList } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { GlassCard, MuscleTag } from './ui.jsx';
 import {
@@ -12,6 +12,8 @@ import {
   formatDateHe,
   fmtWeightBoth,
   vibrate,
+  uniqueRoutineName,
+  routineFromWorkout,
 } from '../lib/utils.js';
 import { useDialogFocus } from '../lib/useDialogFocus.js';
 
@@ -19,6 +21,7 @@ export default function WorkoutHistoryList({ workouts, unit }) {
   const { state, dispatch } = useStore();
   const navigate = useNavigate();
   const [editing, setEditing] = useState(null);
+  const [savingProgram, setSavingProgram] = useState(null); // workout being saved as a routine
 
   function deleteWorkout(workout) {
     if (!confirm(`למחוק את "${workout.name || 'אימון'}"?`)) return;
@@ -47,6 +50,7 @@ export default function WorkoutHistoryList({ workouts, unit }) {
               unit={unit}
               onEdit={() => setEditing(w)}
               onDelete={() => deleteWorkout(w)}
+              onSaveAsProgram={() => setSavingProgram(w)}
             />
           </li>
         ))}
@@ -61,11 +65,21 @@ export default function WorkoutHistoryList({ workouts, unit }) {
           setEditing(null);
         }}
       />
+
+      <SaveAsProgramDialog
+        workout={savingProgram}
+        routines={state.routines}
+        onClose={() => setSavingProgram(null)}
+        onSave={(routine) => {
+          dispatch({ type: 'saveRoutine', routine });
+          setSavingProgram(null);
+        }}
+      />
     </>
   );
 }
 
-function WorkoutRow({ workout: w, unit, onEdit, onDelete }) {
+function WorkoutRow({ workout: w, unit, onEdit, onDelete, onSaveAsProgram }) {
   const navigate = useNavigate();
   const muscles = [...new Set((w.exercises || []).map((e) => e.muscle))].slice(0, 3);
   return (
@@ -90,6 +104,13 @@ function WorkoutRow({ workout: w, unit, onEdit, onDelete }) {
           <span className="tnum ms-1 flex items-center gap-1 whitespace-nowrap text-xs font-semibold text-[var(--color-muted-foreground)]">
             <Clock className="size-3.5" /> {fmtDuration(w.durationSec)}
           </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onSaveAsProgram(); }}
+            className="press flex size-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)]"
+            aria-label="שמור כתוכנית"
+          >
+            <ClipboardList className="size-4" />
+          </button>
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
             className="press flex size-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)]"
@@ -210,6 +231,89 @@ function WorkoutEditorInner({ workout, onClose, onSave, onEditFull }) {
 
         <button type="submit" className="btn-volt press mt-1 rounded-2xl py-3.5 text-sm font-bold">
           שמור שינויים
+        </button>
+      </motion.form>
+    </>
+  );
+}
+
+/* ── Save a completed workout as a reusable routine (program) ───────────── */
+function SaveAsProgramDialog({ workout, routines, onClose, onSave }) {
+  if (!workout) return null;
+  return (
+    <SaveAsProgramDialogInner
+      key={workout.id}
+      workout={workout}
+      routines={routines}
+      onClose={onClose}
+      onSave={onSave}
+    />
+  );
+}
+
+function SaveAsProgramDialogInner({ workout, routines, onClose, onSave }) {
+  const [name, setName] = useState(() => uniqueRoutineName(workout.name || 'תוכנית', routines));
+  const dialogRef = useDialogFocus(true, onClose);
+  const exerciseCount = (workout.exercises || []).length;
+  const finalName = uniqueRoutineName(name, routines);
+
+  function submit(e) {
+    e.preventDefault();
+    vibrate(8);
+    onSave(routineFromWorkout(workout, finalName));
+  }
+
+  return (
+    <>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
+      />
+      <motion.form
+        ref={dialogRef}
+        onSubmit={submit}
+        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+        transition={{ type: 'spring', stiffness: 320, damping: 34 }}
+        className="solid shadow-[var(--shadow-overlay)] fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md flex-col gap-3 rounded-t-2xl p-5 pb-[max(1.25rem,var(--safe-b))]"
+        role="dialog" aria-modal="true" aria-label="שמירת אימון כתוכנית"
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-bold">שמור כתוכנית</h2>
+          <button type="button" onClick={onClose} className="press glass flex size-9 items-center justify-center rounded-xl" aria-label="סגור">
+            <X className="size-4" />
+          </button>
+        </div>
+
+        <p className="text-xs text-[var(--color-muted-foreground)]">
+          יישמרו {exerciseCount} תרגילים כתבנית חדשה ברשימת התוכניות.
+        </p>
+
+        <label className="flex flex-col gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)]">
+          שם התוכנית
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="שם התוכנית"
+            className="glass rounded-2xl px-4 py-3 text-sm font-bold text-[var(--color-card-foreground)] outline-none placeholder:font-normal placeholder:text-[var(--color-muted-foreground)]"
+            autoFocus
+          />
+        </label>
+
+        {finalName !== name.trim() && (
+          <p className="text-xs text-[var(--color-volt)]">
+            שם קיים כבר — התוכנית תישמר בשם &quot;{finalName}&quot;.
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={exerciseCount === 0}
+          className="btn-volt press mt-1 rounded-2xl py-3.5 text-sm font-bold disabled:opacity-40"
+        >
+          <span className="inline-flex items-center justify-center gap-2">
+            <ClipboardList className="size-4" /> שמור כתוכנית
+          </span>
         </button>
       </motion.form>
     </>

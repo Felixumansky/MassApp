@@ -77,9 +77,10 @@ export function CloudProvider({ children }) {
       routines: state.routines,
       bodyWeights: state.bodyWeights,
       customExercises: state.customExercises,
+      exerciseImages: state.exerciseImages || {},
       deletedIds: state.deletedIds || [],
     }),
-    [state.profile, state.workouts, state.routines, state.bodyWeights, state.customExercises, state.deletedIds]
+    [state.profile, state.workouts, state.routines, state.bodyWeights, state.customExercises, state.exerciseImages, state.deletedIds]
   );
   const sliceKey = JSON.stringify(slice);
   latestSlice.current = slice;

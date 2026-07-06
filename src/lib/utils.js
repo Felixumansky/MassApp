@@ -108,6 +108,42 @@ export function epley1rm(weight, reps) {
   return Math.round(Number(weight) * (1 + Number(reps) / 30));
 }
 
+/** Return `name` if free among the routines, else append " (2)", " (3)"…
+    until unique. Case-insensitive on the trimmed name. Falls back to 'תוכנית'. */
+export function uniqueRoutineName(name, routines = []) {
+  const base = String(name || '').trim() || 'תוכנית';
+  const taken = new Set(
+    (routines || []).map((r) => String(r?.name || '').trim().toLowerCase())
+  );
+  if (!taken.has(base.toLowerCase())) return base;
+  let n = 2;
+  while (taken.has(`${base} (${n})`.toLowerCase())) n++;
+  return `${base} (${n})`;
+}
+
+/** Build a new routine ({id,name,exercises}) from a completed workout. Each
+    exercise becomes a { exerciseId, targetSets, targetReps } entry: sets count
+    from the logged sets, reps from the most common rep value across them. */
+export function routineFromWorkout(workout, name) {
+  const exercises = (workout?.exercises || []).map((ex) => {
+    const sets = ex.sets || [];
+    const counts = {};
+    for (const s of sets) {
+      const r = String(s?.reps ?? '').trim();
+      if (r) counts[r] = (counts[r] || 0) + 1;
+    }
+    const targetReps =
+      Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0] ??
+      (ex.targetReps ? String(ex.targetReps) : '');
+    return {
+      exerciseId: ex.exerciseId,
+      targetSets: sets.length || Number(ex.targetSets) || 3,
+      targetReps,
+    };
+  });
+  return { id: uid(), name: String(name || '').trim() || 'תוכנית', exercises };
+}
+
 export function fmtDuration(sec) {
   const s = Math.max(0, Math.floor(sec));
   const m = Math.floor(s / 60);

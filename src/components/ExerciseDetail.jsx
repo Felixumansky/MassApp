@@ -1,11 +1,12 @@
-import { lazy, Suspense, useState, useEffect, useMemo } from 'react';
+import { lazy, Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Dumbbell, TrendingUp, AlertTriangle } from 'lucide-react';
+import { X, Dumbbell, TrendingUp, AlertTriangle, Camera, Trash2 } from 'lucide-react';
 import { muscleById } from '../lib/exercises.js';
 import { exerciseMediaUrl } from '../lib/api.js';
 import { exerciseE1rmSeries, detectPlateau } from '../lib/analytics.js';
-import { fmtWeight, fmtWeightBoth, shortDateHe } from '../lib/utils.js';
+import { fmtWeight, fmtWeightBoth, shortDateHe, compressImage } from '../lib/utils.js';
 import { MuscleTag, AppLoader } from './ui.jsx';
+import { useStore } from '../store.jsx';
 import { useDialogFocus } from '../lib/useDialogFocus.js';
 
 const E1rmChart = lazy(() => import('./ProgressCharts.jsx').then((m) => ({ default: m.E1rmChart })));
@@ -13,8 +14,10 @@ const E1rmChart = lazy(() => import('./ProgressCharts.jsx').then((m) => ({ defau
 /** Bottom-sheet showing a single exercise: GIF demo, muscles, equipment, steps.
  *  `exercise` is the resolved catalog object (or null → closed). */
 export default function ExerciseDetail({ exercise, workouts = [], unit = 'kg', onClose }) {
+  const { state, dispatch } = useStore();
   const open = !!exercise;
   const dialogRef = useDialogFocus(open, onClose);
+  const fileRef = useRef(null);
   const [imgFailed, setImgFailed] = useState(false);
   const [stepsLang, setStepsLang] = useState('he');
 
@@ -22,7 +25,17 @@ export default function ExerciseDetail({ exercise, workouts = [], unit = 'kg', o
   useEffect(() => { setImgFailed(false); setStepsLang('he'); }, [exercise?.id]);
 
   const m = exercise ? muscleById(exercise.muscle) : null;
+  // A user-uploaded image (persisted per exercise) replaces the demo GIF when present.
+  const userImg = exercise ? state.exerciseImages?.[exercise.id] : '';
   const gif = exercise ? exerciseMediaUrl(exercise.mediaId) : '';
+
+  async function pickImage(e) {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-picking the same file
+    if (!file || !exercise) return;
+    const url = await compressImage(file);
+    if (url) dispatch({ type: 'setExerciseImage', id: exercise.id, dataUrl: url });
+  }
   const stepsHe = exercise?.steps || [];
   const stepsEn = exercise?.steps_en || [];
   const hasBoth = stepsHe.length > 0 && stepsEn.length > 0;
@@ -81,12 +94,15 @@ export default function ExerciseDetail({ exercise, workouts = [], unit = 'kg', o
             </div>
 
             <div className="-mx-1 flex-1 overflow-y-auto px-1">
-              {/* GIF demo (falls back to an icon when there is no media / it fails to load) */}
+              {/* Media: a user-uploaded image replaces the demo GIF when present;
+                  otherwise fall back to the GIF, then an icon. */}
               <div
-                className="mb-3 flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl"
+                className="mb-2 flex aspect-square w-full items-center justify-center overflow-hidden rounded-2xl"
                 style={{ background: `${m?.color}14` }}
               >
-                {gif && !imgFailed ? (
+                {userImg ? (
+                  <img src={userImg} alt={exercise?.name} className="size-full object-cover" />
+                ) : gif && !imgFailed ? (
                   <img
                     src={gif}
                     alt={exercise?.name_en || exercise?.name}
@@ -97,6 +113,26 @@ export default function ExerciseDetail({ exercise, workouts = [], unit = 'kg', o
                 ) : (
                   <Dumbbell className="size-12" style={{ color: m?.color }} />
                 )}
+              </div>
+
+              {/* Upload / replace / remove a persistent image for this exercise */}
+              <div className="mb-3 flex items-center gap-2">
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="press glass flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold"
+                >
+                  <Camera className="size-3.5" /> {userImg ? 'החלף תמונה' : 'העלה תמונה'}
+                </button>
+                {userImg && (
+                  <button
+                    onClick={() => dispatch({ type: 'removeExerciseImage', id: exercise.id })}
+                    className="press glass flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold text-[var(--color-muted-foreground)]"
+                    aria-label="הסר תמונה"
+                  >
+                    <Trash2 className="size-3.5" /> הסר תמונה
+                  </button>
+                )}
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={pickImage} />
               </div>
 
               {/* tags: muscle (Hebrew) + equipment + target (English metadata) */}
