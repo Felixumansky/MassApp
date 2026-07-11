@@ -121,9 +121,9 @@ export function uniqueRoutineName(name, routines = []) {
   return `${base} (${n})`;
 }
 
-/** Build a new routine ({id,name,exercises}) from a completed workout. Each
-    exercise becomes a { exerciseId, targetSets, targetReps } entry: sets count
-    from the logged sets, reps from the most common rep value across them. */
+/** Build a new routine ({id,name,exercises}) from a completed workout.
+    Besides targets, freeze the completed session data onto every entry so the
+    first workout started from the new routine is a faithful copy. */
 export function routineFromWorkout(workout, name) {
   const exercises = (workout?.exercises || []).map((ex) => {
     const sets = ex.sets || [];
@@ -139,6 +139,13 @@ export function routineFromWorkout(workout, name) {
       exerciseId: ex.exerciseId,
       targetSets: sets.length || Number(ex.targetSets) || 3,
       targetReps,
+      ...(ex.name ? { name: ex.name } : null),
+      ...(ex.muscle ? { muscle: ex.muscle } : null),
+      ...(ex.note ? { note: ex.note } : null),
+      ...(ex.photo ? { photo: ex.photo } : null),
+      ...(sets.length
+        ? { sets: sets.map((s) => ({ reps: s.reps ?? '', weight: s.weight ?? '' })) }
+        : null),
     };
   });
   return { id: uid(), name: String(name || '').trim() || 'תוכנית', exercises };

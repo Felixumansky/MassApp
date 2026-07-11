@@ -2,6 +2,34 @@ import { describe, expect, it } from 'vitest';
 import { reducer, seed } from './store.jsx';
 
 describe('store reducer', () => {
+  it('starts a saved workout program as a faithful copy of its exercise data', () => {
+    const routine = {
+      id: 'r-last-workout',
+      name: 'האימון האחרון',
+      exercises: [{
+        exerciseId: 'legacy-standing-press',
+        targetSets: 1,
+        targetReps: '10',
+        name: 'לחיצה מלמטה בעמידה',
+        muscle: 'shoulders',
+        note: 'אחיזה הפוכה',
+        photo: 'data:image/jpeg;base64,abc',
+        sets: [{ reps: '10', weight: '20' }],
+      }],
+    };
+
+    const next = reducer(seed(), { type: 'startWorkout', routine });
+
+    expect(next.active.exercises[0]).toMatchObject({
+      exerciseId: 'legacy-standing-press',
+      name: 'לחיצה מלמטה בעמידה',
+      muscle: 'shoulders',
+      note: 'אחיזה הפוכה',
+      photo: 'data:image/jpeg;base64,abc',
+      sets: [{ reps: '10', weight: '20', rpe: '', done: false }],
+    });
+  });
+
   it('starts a routine with custom exercises and target sets', () => {
     const state = {
       ...seed(),

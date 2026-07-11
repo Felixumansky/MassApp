@@ -164,7 +164,7 @@ export function reducer(state, action) {
               uid: uid(),
               exerciseId: id,
               name: baked?.name || ex?.name || id,
-              muscle: ex?.muscle ?? 'chest',
+              muscle: baked?.muscle || ex?.muscle || 'chest',
               targetSets: sets.length,
               targetReps: targets.targetReps,
               note: baked?.note || '',

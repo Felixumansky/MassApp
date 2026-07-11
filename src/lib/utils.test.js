@@ -81,7 +81,16 @@ describe('routineFromWorkout', () => {
     expect(routine.name).toBe('רגליים');
     expect(routine.id).toBeTruthy();
     expect(routine.exercises).toEqual([
-      { exerciseId: 'squat', targetSets: 3, targetReps: '5' },
+      {
+        exerciseId: 'squat',
+        targetSets: 3,
+        targetReps: '5',
+        sets: [
+          { reps: '5', weight: '100' },
+          { reps: '5', weight: '100' },
+          { reps: '8', weight: '80' },
+        ],
+      },
     ]);
   });
 
@@ -91,5 +100,32 @@ describe('routineFromWorkout', () => {
       'x'
     );
     expect(routine.exercises[0]).toMatchObject({ targetSets: 4, targetReps: '10' });
+  });
+
+  it('preserves the session exercise details needed for an exact program copy', () => {
+    const routine = routineFromWorkout(
+      {
+        exercises: [{
+          exerciseId: 'edb-standing-press',
+          name: 'לחיצה מלמטה בעמידה',
+          muscle: 'shoulders',
+          note: 'אחיזה הפוכה',
+          photo: 'data:image/jpeg;base64,abc',
+          sets: [{ reps: '10', weight: '20', rpe: '8', done: true }],
+        }],
+      },
+      'האימון האחרון'
+    );
+
+    expect(routine.exercises[0]).toEqual({
+      exerciseId: 'edb-standing-press',
+      targetSets: 1,
+      targetReps: '10',
+      name: 'לחיצה מלמטה בעמידה',
+      muscle: 'shoulders',
+      note: 'אחיזה הפוכה',
+      photo: 'data:image/jpeg;base64,abc',
+      sets: [{ reps: '10', weight: '20' }],
+    });
   });
 });
