@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, CalendarDays, Dumbbell, ClipboardList, TrendingUp, Plus, TimerOff } from 'lucide-react';
+import { Home, CalendarDays, Apple, Dumbbell, ClipboardList, TrendingUp, Plus, TimerOff } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import StartWorkoutSheet from './StartWorkoutSheet.jsx';
 import { vibrate } from '../lib/utils.js';
@@ -8,6 +8,7 @@ import { vibrate } from '../lib/utils.js';
 const items = [
   { to: '/', label: 'בית', icon: Home },
   { to: '/calendar', label: 'יומן', icon: CalendarDays },
+  { to: '/nutrition', label: 'תזונה', icon: Apple },
   { to: '/library', label: 'תרגילים', icon: Dumbbell },
   { to: '/routines', label: 'תוכניות', icon: ClipboardList },
   { to: '/progress', label: 'התקדמות', icon: TrendingUp },
@@ -41,7 +42,7 @@ export default function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-40 mx-auto flex max-w-md items-center justify-around border-t border-[var(--hairline)] bg-[var(--surface-solid)] px-2 pb-[max(0.5rem,var(--safe-b))] pt-2 lg:hidden"
       aria-label="ניווט ראשי"
     >
-      {items.slice(0, 2).map((it) => (
+      {items.slice(0, 3).map((it) => (
         <Tab key={it.to} {...it} />
       ))}
 
@@ -60,7 +61,7 @@ export default function BottomNav() {
         )}
       </button>
 
-      {items.slice(2).map((it) => (
+      {items.slice(3).map((it) => (
         <Tab key={it.to} {...it} />
       ))}
     </nav>

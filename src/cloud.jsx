@@ -78,9 +78,13 @@ export function CloudProvider({ children }) {
       bodyWeights: state.bodyWeights,
       customExercises: state.customExercises,
       exerciseImages: state.exerciseImages || {},
+      meals: state.meals || [],
+      waterLogs: state.waterLogs || [],
+      customFoods: state.customFoods || [],
+      nutritionGoals: state.nutritionGoals,
       deletedIds: state.deletedIds || [],
     }),
-    [state.profile, state.workouts, state.routines, state.bodyWeights, state.customExercises, state.exerciseImages, state.deletedIds]
+    [state.profile, state.workouts, state.routines, state.bodyWeights, state.customExercises, state.exerciseImages, state.meals, state.waterLogs, state.customFoods, state.nutritionGoals, state.deletedIds]
   );
   const sliceKey = JSON.stringify(slice);
   latestSlice.current = slice;
@@ -102,7 +106,10 @@ export function CloudProvider({ children }) {
           (server.workouts?.length ||
             server.routines?.length ||
             server.bodyWeights?.length ||
-            server.customExercises?.length);
+            server.customExercises?.length ||
+            server.meals?.length ||
+            server.waterLogs?.length ||
+            server.customFoods?.length);
         if (hasServerData) {
           // The DB is the single source of truth — mirror it exactly, no local merge.
           dispatch({ type: 'replaceAll', data: server });
@@ -270,6 +277,7 @@ export function CloudProvider({ children }) {
   const value = useMemo(
     () => ({
       user: auth?.user || null,
+      token: auth?.token || null, // לקריאות API ישירות (למשל ניתוח תזונתי)
       status,
       error,
       login,

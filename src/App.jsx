@@ -19,6 +19,7 @@ const Weight = lazy(() => import('./pages/Weight.jsx'));
 const Calendar = lazy(() => import('./pages/Calendar.jsx'));
 const Profile = lazy(() => import('./pages/Profile.jsx'));
 const WorkoutDetail = lazy(() => import('./pages/WorkoutDetail.jsx'));
+const Nutrition = lazy(() => import('./pages/Nutrition.jsx'));
 
 const page = (El) => (
   <PageTransition>
@@ -41,6 +42,7 @@ function AnimatedRoutes() {
         <Route path="/calendar" element={page(Calendar)} />
         <Route path="/progress" element={page(Progress)} />
         <Route path="/weight" element={page(Weight)} />
+        <Route path="/nutrition" element={page(Nutrition)} />
         <Route path="/profile" element={page(Profile)} />
         <Route path="*" element={page(Dashboard)} />
       </Routes>

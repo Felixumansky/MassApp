@@ -39,6 +39,9 @@ export const api = {
   logout: (token) => req('/api/auth/logout', { method: 'POST', token }).catch(() => {}),
   getState: (token) => req('/api/state', { token }),
   putState: (token, state) => req('/api/state', { method: 'PUT', token, body: state }),
+  // ניתוח תזונתי: תמונה (dataURL) ו/או תיאור טקסט → { items, totals, notes }
+  analyzeFood: (token, { image, text }) =>
+    req('/api/nutrition/analyze', { method: 'POST', token, body: { image, text } }),
 };
 
 // URL for an exercise demonstration GIF, proxied through MassAPI (keeps the

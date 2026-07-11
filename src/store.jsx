@@ -58,6 +58,45 @@ export const DEFAULT_GYM_AUTO_START = {
   routineId: 'free',
 };
 
+export function nutritionGoalsDefaults() {
+  return { calories: 2500, protein: 150, carbs: 300, fat: 80, waterMl: 3000 };
+}
+
+function normalizeNutritionGoals(goals = {}) {
+  const d = nutritionGoalsDefaults();
+  const out = { ...d };
+  for (const k of Object.keys(d)) {
+    const v = Number(goals[k]);
+    if (Number.isFinite(v) && v > 0) out[k] = v;
+  }
+  return out;
+}
+
+// Meal photos are stored as small thumbnails inside the synced blob; drop them
+// from meals older than this so the blob doesn't creep toward the 10MB limit.
+const MEAL_PHOTO_KEEP_DAYS = 30;
+
+function pruneMealPhotos(meals) {
+  const cutoff = dayKey(new Date(Date.now() - MEAL_PHOTO_KEEP_DAYS * 864e5));
+  let changed = false;
+  const next = meals.map((m) => {
+    if (m.photo && m.date < cutoff) {
+      changed = true;
+      const { photo: _photo, ...rest } = m;
+      return rest;
+    }
+    return m;
+  });
+  return changed ? next : meals;
+}
+
+/** newest first: by date, then by creation time within the same day */
+function sortMeals(meals) {
+  return [...meals].sort((a, b) =>
+    a.date < b.date ? 1 : a.date > b.date ? -1 : (b.createdAt || 0) - (a.createdAt || 0)
+  );
+}
+
 function profileDefaults() {
   return {
     name: '',
@@ -104,6 +143,13 @@ export function seed() {
     // Persistent user-uploaded image per exercise, keyed by exerciseId
     // ({ [exerciseId]: <jpeg dataURL> }). Shown in the library + detail sheet.
     exerciseImages: {},
+    // ── תזונה ──
+    // meals: { id, date, mealType, items:[{name,amount,unit,calories,protein,carbs,fat}],
+    //          photo?, source: 'photo'|'voice'|'text'|'catalog', createdAt }
+    meals: [],
+    waterLogs: [],
+    customFoods: [],
+    nutritionGoals: nutritionGoalsDefaults(),
     deletedIds: [],
     active: null,
     // Bottom-docked rest timer. `open` is session-only UI state (reset on load);
@@ -138,6 +184,10 @@ export function reducer(state, action) {
         bodyWeights: action.data.bodyWeights || [],
         customExercises: action.data.customExercises || [],
         exerciseImages: action.data.exerciseImages || state.exerciseImages || {},
+        meals: action.data.meals || [],
+        waterLogs: action.data.waterLogs || [],
+        customFoods: action.data.customFoods || [],
+        nutritionGoals: normalizeNutritionGoals(action.data.nutritionGoals || state.nutritionGoals),
         deletedIds: action.data.deletedIds || state.deletedIds || [],
       };
 
@@ -565,6 +615,86 @@ export function reducer(state, action) {
           return next;
         })(),
         deletedIds: tombstone(state, action.id),
+      };
+
+    /* ── תזונה ── */
+
+    case 'addMeal': {
+      const meal = {
+        id: uid(),
+        date: action.meal.date || dayKey(),
+        mealType: action.meal.mealType || 'snack',
+        items: action.meal.items || [],
+        source: action.meal.source || 'text',
+        createdAt: Date.now(),
+        ...(action.meal.photo ? { photo: action.meal.photo } : null),
+      };
+      if (!meal.items.length) return state;
+      return { ...state, meals: pruneMealPhotos(sortMeals([meal, ...(state.meals || [])])) };
+    }
+
+    case 'updateMeal':
+      return {
+        ...state,
+        meals: sortMeals(
+          (state.meals || []).map((m) => (m.id === action.id ? { ...m, ...action.patch } : m))
+        ),
+      };
+
+    case 'deleteMeal':
+      return {
+        ...state,
+        meals: (state.meals || []).filter((m) => m.id !== action.id),
+        deletedIds: tombstone(state, action.id),
+      };
+
+    case 'addWater': {
+      const amountMl = Math.round(Number(action.amountMl) || 0);
+      if (amountMl <= 0) return state;
+      return {
+        ...state,
+        waterLogs: [
+          ...(state.waterLogs || []),
+          { id: uid(), date: action.date || dayKey(), amountMl, createdAt: Date.now() },
+        ],
+      };
+    }
+
+    case 'deleteWater':
+      return {
+        ...state,
+        waterLogs: (state.waterLogs || []).filter((w) => w.id !== action.id),
+        deletedIds: tombstone(state, action.id),
+      };
+
+    case 'addCustomFood': {
+      const f = action.food || {};
+      const food = {
+        id: 'cf-' + uid(),
+        name: String(f.name || '').trim(),
+        caloriesPer100: Number(f.caloriesPer100) || 0,
+        proteinPer100: Number(f.proteinPer100) || 0,
+        carbsPer100: Number(f.carbsPer100) || 0,
+        fatPer100: Number(f.fatPer100) || 0,
+        defaultAmount: Number(f.defaultAmount) || 100,
+        unit: f.unit || 'גרם',
+        custom: true,
+      };
+      if (!food.name) return state;
+      return { ...state, customFoods: [...(state.customFoods || []), food] };
+    }
+
+    case 'deleteCustomFood':
+      return {
+        ...state,
+        customFoods: (state.customFoods || []).filter((f) => f.id !== action.id),
+        deletedIds: tombstone(state, action.id),
+      };
+
+    case 'setNutritionGoals':
+      return {
+        ...state,
+        nutritionGoals: normalizeNutritionGoals({ ...state.nutritionGoals, ...action.patch }),
       };
 
     case 'setExerciseImage':
