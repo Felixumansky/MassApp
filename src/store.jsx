@@ -13,7 +13,6 @@ function lastWorkoutOfType(workouts, routine) {
   if (!routine) return null;
   return (
     workouts.find((w) => w.routineId === routine.id) ||
-    (routine.sourceId && workouts.find((w) => w.routineId === routine.sourceId)) ||
     workouts.find((w) => !w.routineId && w.name === routine.name) ||
     null
   );
@@ -148,21 +147,29 @@ export function reducer(state, action) {
             const id = routineExerciseId(entry);
             const targets = routineExerciseTargets(entry);
             const ex = findEx(state, id);
+            // A duplicated routine bakes the source's last session onto the entry
+            // (name/note/photo/sets) — restore it so the copy's first session is
+            // an exact clone. Otherwise build empty sets from the targets.
+            const baked = typeof entry === 'object' && entry ? entry : null;
+            const sets = baked?.sets?.length
+              ? baked.sets.map((s) => ({ id: uid(), reps: s.reps, weight: s.weight, rpe: '', done: false }))
+              : Array.from({ length: targets.targetSets }, () => ({
+                  id: uid(),
+                  reps: targets.targetReps,
+                  weight: '',
+                  rpe: '',
+                  done: false,
+                }));
             return {
               uid: uid(),
               exerciseId: id,
-              name: (typeof entry === 'object' && entry?.name) || ex?.name || id,
+              name: baked?.name || ex?.name || id,
               muscle: ex?.muscle ?? 'chest',
-              targetSets: targets.targetSets,
+              targetSets: sets.length,
               targetReps: targets.targetReps,
-              note: (typeof entry === 'object' && entry?.note) || '',
-              sets: Array.from({ length: targets.targetSets }, () => ({
-                id: uid(),
-                reps: targets.targetReps,
-                weight: '',
-                rpe: '',
-                done: false,
-              })),
+              note: baked?.note || '',
+              ...(baked?.photo ? { photo: baked.photo } : null),
+              sets,
             };
           })
         : [];
@@ -459,30 +466,32 @@ export function reducer(state, action) {
       const idx = state.routines.findIndex((r) => r.id === action.id);
       if (idx < 0) return state;
       const src = state.routines[idx];
-      // Bake the custom exercise titles/notes the user set in past sessions into
-      // the copy's entries, keyed by exerciseId, so they survive even if the
-      // source's history is later unmatched or deleted.
+      // Freeze a full clone of the source's last session onto the copy's entries
+      // (custom title, note, per-session photo, and last weights/reps), keyed by
+      // exerciseId. The copy is then self-contained and reproduces that session
+      // on its first start — no runtime history matching needed.
       const prev = lastWorkoutOfType(state.workouts, src);
-      const customById = {};
-      for (const e of prev?.exercises || []) {
-        const base = findEx(state, e.exerciseId);
-        const extra = {
-          ...(e.name && e.name !== base?.name ? { name: e.name } : null),
-          ...(e.note ? { note: e.note } : null),
-        };
-        if (Object.keys(extra).length) customById[e.exerciseId] = extra;
-      }
+      const snapById = {};
+      for (const e of prev?.exercises || []) snapById[e.exerciseId] = e;
       const copy = {
         ...src,
         id: uid(),
         name: dupName(src.name, state.routines),
         exercises: src.exercises.map((entry) => {
           const id = routineExerciseId(entry);
-          return { exerciseId: id, ...routineExerciseTargets(entry), ...(customById[id] || null) };
+          const targets = routineExerciseTargets(entry);
+          const snap = snapById[id];
+          const base = findEx(state, id);
+          return {
+            exerciseId: id,
+            targetSets: snap?.sets?.length || targets.targetSets,
+            targetReps: targets.targetReps,
+            ...(snap?.name && snap.name !== base?.name ? { name: snap.name } : null),
+            ...(snap?.note ? { note: snap.note } : null),
+            ...(snap?.photo ? { photo: snap.photo } : null),
+            ...(snap?.sets?.length ? { sets: snap.sets.map((s) => ({ reps: s.reps, weight: s.weight })) } : null),
+          };
         }),
-        // Link the copy to the original so lastWorkoutOfType prefills the source's
-        // last weights. Point at the root so a copy-of-a-copy still resolves.
-        sourceId: src.sourceId || src.id,
       };
       const routines = [...state.routines];
       routines.splice(idx + 1, 0, copy);

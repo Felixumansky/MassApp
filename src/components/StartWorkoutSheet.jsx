@@ -25,12 +25,10 @@ export default function StartWorkoutSheet({ open, onClose, routines, workouts, c
   );
 }
 
-/** Same matching as the reducer: routineId first, then a duplicated routine's
-    source, then name fallback for old history. */
+/** Same matching as the reducer: routineId first, name fallback for old history. */
 function lastWorkoutOfType(workouts, routine) {
   return (
     workouts.find((w) => w.routineId === routine.id) ||
-    (routine.sourceId && workouts.find((w) => w.routineId === routine.sourceId)) ||
     workouts.find((w) => !w.routineId && w.name === routine.name) ||
     null
   );
