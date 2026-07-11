@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { Home, CalendarDays, Apple, Dumbbell, ClipboardList, TrendingUp, Scale, User, Zap, Play, LogOut } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { useCloud } from '../cloud.jsx';
+import { canUseNutrition } from '../lib/nutritionAccess.js';
 
 const links = [
   { to: '/', label: 'בית', icon: Home },
@@ -19,6 +20,7 @@ export default function Sidebar() {
   const { state, dispatch } = useStore();
   const { user, logout } = useCloud();
   const navigate = useNavigate();
+  const visibleLinks = links.filter((l) => l.to !== '/nutrition' || canUseNutrition(user));
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 p-6 lg:flex">
@@ -30,7 +32,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex flex-col gap-1" aria-label="ניווט ראשי">
-        {links.map(({ to, label, icon: Icon }) => (
+        {visibleLinks.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}

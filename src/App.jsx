@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import AuroraBackground from './components/AuroraBackground.jsx';
 import Sidebar from './components/Sidebar.jsx';
@@ -9,6 +9,7 @@ import LockScreen from './components/LockScreen.jsx';
 import { AppLoader } from './components/ui.jsx';
 import { useCloud } from './cloud.jsx';
 import { useGymAutoStart } from './lib/useGymAutoStart.jsx';
+import { canUseNutrition } from './lib/nutritionAccess.js';
 
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
 const ActiveWorkout = lazy(() => import('./pages/ActiveWorkout.jsx'));
@@ -31,6 +32,7 @@ const page = (El) => (
 
 function AnimatedRoutes() {
   const location = useLocation();
+  const { user } = useCloud();
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
@@ -42,7 +44,7 @@ function AnimatedRoutes() {
         <Route path="/calendar" element={page(Calendar)} />
         <Route path="/progress" element={page(Progress)} />
         <Route path="/weight" element={page(Weight)} />
-        <Route path="/nutrition" element={page(Nutrition)} />
+        <Route path="/nutrition" element={canUseNutrition(user) ? page(Nutrition) : <Navigate to="/" replace />} />
         <Route path="/profile" element={page(Profile)} />
         <Route path="*" element={page(Dashboard)} />
       </Routes>
