@@ -54,7 +54,10 @@ export default function Routines() {
       ) : (
         <ul className="flex flex-col gap-3">
           {state.routines.map((r, i) => {
-            const muscles = [...new Set(r.exercises.map((entry) => resolveExercise(routineExerciseId(entry), state.customExercises)?.muscle).filter(Boolean))].slice(0, 4);
+            const muscles = [...new Set(r.exercises.map((entry) =>
+              (typeof entry === 'object' && entry?.muscle) ||
+              resolveExercise(routineExerciseId(entry), state.customExercises)?.muscle
+            ).filter(Boolean))].slice(0, 4);
             return (
               <li key={r.id} className="fade-up" style={{ '--d': `${0.05 * i}s` }}>
                 <GlassCard className="flex flex-col gap-3">
@@ -114,11 +117,9 @@ function RoutineEditorInner({ draft, picker, setPicker, onClose, onSave }) {
       xs.map((entry, i) =>
         i === idx
           ? {
+              ...(typeof entry === 'object' && entry ? entry : null),
               exerciseId: routineExerciseId(entry),
               ...routineExerciseTargets(entry),
-              ...(entry?.name ? { name: entry.name } : null),
-              ...(entry?.note ? { note: entry.note } : null),
-              ...(entry?.photo ? { photo: entry.photo } : null),
               ...patch,
             }
           : entry
@@ -165,16 +166,18 @@ function RoutineEditorInner({ draft, picker, setPicker, onClose, onSave }) {
             <p className="py-8 text-center text-sm text-[var(--color-muted-foreground)]">הוסף תרגילים לתוכנית</p>
           ) : (
             <ul className="flex flex-col gap-2">
-              {exercises.map((id, idx) => {
-                const exerciseId = routineExerciseId(id);
-                const targets = routineExerciseTargets(id);
+              {exercises.map((entry, idx) => {
+                const exerciseId = routineExerciseId(entry);
+                const targets = routineExerciseTargets(entry);
                 const ex = resolveExercise(exerciseId, state.customExercises);
+                const title = (typeof entry === 'object' && entry?.name) || ex?.name || exerciseId;
+                const muscle = (typeof entry === 'object' && entry?.muscle) || ex?.muscle;
                 return (
                   <li key={`${exerciseId}-${idx}`} className="glass flex flex-col gap-2 rounded-2xl px-3 py-2.5">
                     <div className="flex items-center gap-2">
                       <GripVertical className="size-4 text-[var(--color-muted-foreground)]" />
-                      <span className="flex-1 text-sm font-semibold">{ex?.name ?? exerciseId}</span>
-                      <MuscleTag muscle={ex?.muscle} />
+                      <span className="flex-1 text-sm font-semibold">{title}</span>
+                      <MuscleTag muscle={muscle} />
                       <button onClick={() => moveEntry(idx, -1)} disabled={idx === 0} className="press text-[var(--color-muted-foreground)] disabled:opacity-30" aria-label="הזז למעלה">
                         <ArrowUp className="size-4" />
                       </button>
