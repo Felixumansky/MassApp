@@ -116,6 +116,8 @@ function RoutineEditorInner({ draft, picker, setPicker, onClose, onSave }) {
           ? {
               exerciseId: routineExerciseId(entry),
               ...routineExerciseTargets(entry),
+              ...(entry?.name ? { name: entry.name } : null),
+              ...(entry?.note ? { note: entry.note } : null),
               ...patch,
             }
           : entry

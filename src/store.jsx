@@ -151,11 +151,11 @@ export function reducer(state, action) {
             return {
               uid: uid(),
               exerciseId: id,
-              name: ex?.name ?? id,
+              name: (typeof entry === 'object' && entry?.name) || ex?.name || id,
               muscle: ex?.muscle ?? 'chest',
               targetSets: targets.targetSets,
               targetReps: targets.targetReps,
-              note: '',
+              note: (typeof entry === 'object' && entry?.note) || '',
               sets: Array.from({ length: targets.targetSets }, () => ({
                 id: uid(),
                 reps: targets.targetReps,
@@ -459,11 +459,27 @@ export function reducer(state, action) {
       const idx = state.routines.findIndex((r) => r.id === action.id);
       if (idx < 0) return state;
       const src = state.routines[idx];
+      // Bake the custom exercise titles/notes the user set in past sessions into
+      // the copy's entries, keyed by exerciseId, so they survive even if the
+      // source's history is later unmatched or deleted.
+      const prev = lastWorkoutOfType(state.workouts, src);
+      const customById = {};
+      for (const e of prev?.exercises || []) {
+        const base = findEx(state, e.exerciseId);
+        const extra = {
+          ...(e.name && e.name !== base?.name ? { name: e.name } : null),
+          ...(e.note ? { note: e.note } : null),
+        };
+        if (Object.keys(extra).length) customById[e.exerciseId] = extra;
+      }
       const copy = {
         ...src,
         id: uid(),
         name: dupName(src.name, state.routines),
-        exercises: src.exercises.map((e) => (typeof e === 'string' ? e : { ...e })),
+        exercises: src.exercises.map((entry) => {
+          const id = routineExerciseId(entry);
+          return { exerciseId: id, ...routineExerciseTargets(entry), ...(customById[id] || null) };
+        }),
         // Link the copy to the original so lastWorkoutOfType prefills the source's
         // last weights. Point at the root so a copy-of-a-copy still resolves.
         sourceId: src.sourceId || src.id,
