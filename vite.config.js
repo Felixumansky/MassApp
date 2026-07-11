@@ -12,7 +12,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'MassApp — מעקב אימונים',
+        name: 'MassApp מעקב אימונים',
         short_name: 'MassApp',
         description: 'מעקב אימוני כוח: תרגילים, סטים, חזרות והתקדמות',
         lang: 'he',

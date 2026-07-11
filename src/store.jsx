@@ -471,8 +471,11 @@ export function reducer(state, action) {
       // exerciseId. The copy is then self-contained and reproduces that session
       // on its first start — no runtime history matching needed.
       const prev = lastWorkoutOfType(state.workouts, src);
+      // Key the snapshot by CANONICAL id so a legacy routine id ('lateral-raise')
+      // matches the catalog id a logged workout may carry (mirrors addExercise).
+      const canonicalId = (id) => findEx(state, id)?.id ?? id;
       const snapById = {};
-      for (const e of prev?.exercises || []) snapById[e.exerciseId] = e;
+      for (const e of prev?.exercises || []) snapById[canonicalId(e.exerciseId)] = e;
       const copy = {
         ...src,
         id: uid(),
@@ -480,13 +483,15 @@ export function reducer(state, action) {
         exercises: src.exercises.map((entry) => {
           const id = routineExerciseId(entry);
           const targets = routineExerciseTargets(entry);
-          const snap = snapById[id];
-          const base = findEx(state, id);
+          const snap = snapById[canonicalId(id)];
+          // Faithful frozen clone: carry the exact session title/note/photo/sets
+          // whenever the last session had them (always bake the name — do NOT
+          // gate on "differs from catalog", which dropped custom titles).
           return {
             exerciseId: id,
             targetSets: snap?.sets?.length || targets.targetSets,
             targetReps: targets.targetReps,
-            ...(snap?.name && snap.name !== base?.name ? { name: snap.name } : null),
+            ...(snap?.name ? { name: snap.name } : null),
             ...(snap?.note ? { note: snap.note } : null),
             ...(snap?.photo ? { photo: snap.photo } : null),
             ...(snap?.sets?.length ? { sets: snap.sets.map((s) => ({ reps: s.reps, weight: s.weight })) } : null),
