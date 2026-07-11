@@ -73,6 +73,8 @@ export default function ActiveWorkout() {
         open
         summary={completed}
         unit={unit}
+        sourceRoutine={state.routines.find((r) => r.id === completed.routineId) || null}
+        onDuplicate={() => dispatch({ type: 'duplicateRoutine', id: completed.routineId })}
         onDone={() => { setCompleted(null); navigate('/'); }}
       />
     );
@@ -138,6 +140,7 @@ export default function ActiveWorkout() {
 
     return {
       name: active.name,
+      routineId: active.routineId ?? null,
       durationSec: workoutDisplayDuration(active),
       totalSets,
       totalVolume: Math.round(totalVolume),
@@ -313,7 +316,7 @@ function RetroWorkoutMeta({ active, dispatch }) {
   );
 }
 
-const setGridClass = 'grid grid-cols-1 gap-2 sm:grid-cols-[1.7rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_2.2rem] sm:items-center sm:gap-1.5';
+const setGridClass = 'grid grid-cols-1 gap-2 sm:grid-cols-[1.7rem_minmax(0,1fr)_minmax(0,1fr)_2.2rem] sm:items-center sm:gap-1.5';
 
 function ExerciseCard({ ex, unit, onUnitChange, workouts, priorBest, onToggle, dispatch, defaultCollapsed = true }) {
   const doneCount = ex.sets.filter((s) => s.done).length;
@@ -435,7 +438,6 @@ function ExerciseCard({ ex, unit, onUnitChange, workouts, priorBest, onToggle, d
               <span className="text-center">סט</span>
               <span className="text-center">חזרות</span>
               <span className="text-center">משקל ({unitLabel(unit)})</span>
-              <span className="text-center">RPE</span>
               <span className="text-center">{doneCount}/{ex.sets.length}</span>
             </div>
 
@@ -466,21 +468,6 @@ function ExerciseCard({ ex, unit, onUnitChange, workouts, priorBest, onToggle, d
                     placeholder="—"
                     className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-base font-bold text-[var(--color-card-foreground)] outline-none focus:bg-white/10 sm:w-full"
                     aria-label={`משקל סט ${i + 1}`}
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--color-muted-foreground)] sm:block">
-                  <span className="sm:hidden">RPE</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="1"
-                    max="10"
-                    step="0.5"
-                    value={s.rpe || ''}
-                    onChange={(e) => dispatch({ type: 'updateSet', uid: ex.uid, setId: s.id, patch: { rpe: e.target.value } })}
-                    placeholder="—"
-                    className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-sm font-bold text-[var(--color-card-foreground)] outline-none focus:bg-white/10 sm:w-full"
-                    aria-label={`RPE סט ${i + 1}`}
                   />
                 </label>
                 <button

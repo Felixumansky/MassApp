@@ -13,9 +13,19 @@ function lastWorkoutOfType(workouts, routine) {
   if (!routine) return null;
   return (
     workouts.find((w) => w.routineId === routine.id) ||
+    (routine.sourceId && workouts.find((w) => w.routineId === routine.sourceId)) ||
     workouts.find((w) => !w.routineId && w.name === routine.name) ||
     null
   );
+}
+
+/** Build a unique "(עותק)" name for a duplicated routine among existing ones. */
+function dupName(base, routines) {
+  const root = (base || 'תוכנית').replace(/\s*\(עותק(?:\s*\d+)?\)$/, '');
+  const taken = new Set(routines.map((r) => r.name));
+  let name = `${root} (עותק)`;
+  for (let n = 2; taken.has(name); n++) name = `${root} (עותק ${n})`;
+  return name;
 }
 
 /** Copy a saved workout's exercises into fresh active exercises: fresh ids,
@@ -443,6 +453,24 @@ export function reducer(state, action) {
           ? state.routines.map((r) => (r.id === action.routine.id ? action.routine : r))
           : [...state.routines, action.routine],
       };
+    }
+
+    case 'duplicateRoutine': {
+      const idx = state.routines.findIndex((r) => r.id === action.id);
+      if (idx < 0) return state;
+      const src = state.routines[idx];
+      const copy = {
+        ...src,
+        id: uid(),
+        name: dupName(src.name, state.routines),
+        exercises: src.exercises.map((e) => (typeof e === 'string' ? e : { ...e })),
+        // Link the copy to the original so lastWorkoutOfType prefills the source's
+        // last weights. Point at the root so a copy-of-a-copy still resolves.
+        sourceId: src.sourceId || src.id,
+      };
+      const routines = [...state.routines];
+      routines.splice(idx + 1, 0, copy);
+      return { ...state, routines };
     }
 
     case 'deleteRoutine':

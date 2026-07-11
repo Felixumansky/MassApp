@@ -1,14 +1,15 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Clock, Layers, Dumbbell, ListChecks, Sparkles } from 'lucide-react';
+import { Trophy, Clock, Layers, Dumbbell, ListChecks, Sparkles, Copy, Check } from 'lucide-react';
 import { fmtDuration, fmtWeight, fmtWeightBoth, unitLabel, otherUnit } from '../lib/utils.js';
 import { useDialogFocus } from '../lib/useDialogFocus.js';
 
 const CONFETTI = ['#c6f24e', '#38bdf8', '#a78bfa', '#fbbf24', '#fb7185'];
 
 /** Celebratory post-workout summary. Mounts with confetti + glow. */
-export default function WorkoutComplete({ open, summary, unit = 'kg', onDone }) {
+export default function WorkoutComplete({ open, summary, unit = 'kg', sourceRoutine = null, onDuplicate, onDone }) {
   const dialogRef = useDialogFocus(open, onDone);
+  const [duplicated, setDuplicated] = useState(false);
   const pieces = useMemo(
     () =>
       Array.from({ length: 26 }, (_, i) => ({
@@ -92,7 +93,19 @@ export default function WorkoutComplete({ open, summary, unit = 'kg', onDone }) 
               </div>
             )}
 
-            <button onClick={onDone} className="btn-volt press mt-6 w-full rounded-2xl py-3.5 text-base font-bold">
+            {sourceRoutine && (
+              <button
+                onClick={() => { if (!duplicated) { onDuplicate?.(); setDuplicated(true); } }}
+                disabled={duplicated}
+                className="press glass mt-4 flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold disabled:opacity-70"
+              >
+                {duplicated
+                  ? <><Check className="size-4 text-[var(--color-volt)]" /> שוכפל ✓</>
+                  : <><Copy className="size-4 text-[var(--color-volt)]" /> שכפל תוכנית זו</>}
+              </button>
+            )}
+
+            <button onClick={onDone} className={`btn-volt press w-full rounded-2xl py-3.5 text-base font-bold ${sourceRoutine ? 'mt-3' : 'mt-6'}`}>
               סיום
             </button>
           </motion.div>

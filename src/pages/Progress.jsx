@@ -1,15 +1,14 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Trophy, Dumbbell, Layers, Scale, ChevronLeft, Activity, Flame } from 'lucide-react';
+import { Trophy, Dumbbell, Layers, Scale, ChevronLeft, Activity } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, EmptyState, AppLoader } from '../components/ui.jsx';
 import WorkoutHistoryList from '../components/WorkoutHistory.jsx';
 import { workoutVolume, epley1rm, shortDateHe, dayKey, toUnit, fmtWeight, fmtWeightBoth, unitLabel, otherUnit } from '../lib/utils.js';
 import { MUSCLES, muscleById } from '../lib/exercises.js';
-import { setsByMuscle, muscleSetStatus, HYPERTROPHY_MIN, HYPERTROPHY_MAX, hasAnyRpe, weeklyRpeStats } from '../lib/analytics.js';
+import { setsByMuscle, muscleSetStatus, HYPERTROPHY_MIN, HYPERTROPHY_MAX } from '../lib/analytics.js';
 
 const VolumeChart = lazy(() => import('../components/ProgressCharts.jsx').then((m) => ({ default: m.VolumeChart })));
-const RpeChart = lazy(() => import('../components/ProgressCharts.jsx').then((m) => ({ default: m.RpeChart })));
 
 export default function Progress() {
   const { state } = useStore();
@@ -69,11 +68,6 @@ export default function Progress() {
       return { ...m, sets, status: muscleSetStatus(sets), pct: Math.min(100, (sets / maxSets) * 100), minPct: (HYPERTROPHY_MIN / maxSets) * 100, maxPct: (HYPERTROPHY_MAX / maxSets) * 100 };
     });
   }, [workouts, muscleRange]);
-
-  // Feature 4 — RPE / intensity analytics (only when any RPE was ever logged).
-  const showRpe = useMemo(() => hasAnyRpe(workouts), [workouts]);
-  const rpeWeekly = useMemo(() => (showRpe ? weeklyRpeStats(workouts, 8) : []), [workouts, showRpe]);
-  const rpeCurrent = rpeWeekly.at(-1);
 
   const prs = useMemo(() => {
     const best = {};
@@ -198,31 +192,6 @@ export default function Progress() {
       </GlassCard>
 
       <MuscleBalanceCard data={muscleBalance} range={muscleRange} onRange={setMuscleRange} />
-
-      {showRpe && (
-        <GlassCard>
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div>
-              <h2 className="mb-1 flex items-center gap-1.5 font-bold">
-                <Flame className="size-4 text-[var(--color-amber)]" /> עצימות (RPE)
-              </h2>
-              <p className="text-xs text-[var(--color-muted-foreground)]">מגמת מאמץ ממוצע ב‑8 השבועות האחרונים</p>
-            </div>
-            {rpeCurrent && rpeCurrent.totalSets > 0 && (
-              <div className="text-end">
-                <p className="tnum text-lg font-extrabold leading-none" style={{ color: 'var(--color-amber)' }}>
-                  {rpeCurrent.hardSets}<span className="text-sm text-[var(--color-muted-foreground)]">/{rpeCurrent.totalSets}</span>
-                </p>
-                <p className="text-[11px] text-[var(--color-muted-foreground)]">סטים קשים השבוע</p>
-              </div>
-            )}
-          </div>
-          <Suspense fallback={<AppLoader label="טוען גרף…" />}>
-            <RpeChart data={rpeWeekly} />
-          </Suspense>
-          <p className="mt-2 text-center text-[11px] text-[var(--color-muted-foreground)]">סט "קשה" = RPE 7 ומעלה · מדד לנפח אפקטיבי לגירוי מסה</p>
-        </GlassCard>
-      )}
 
       {weightLink}
 

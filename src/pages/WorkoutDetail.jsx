@@ -428,11 +428,10 @@ function ViewExerciseCard({ ex, unit }) {
             className="flex flex-col gap-2.5 overflow-hidden"
           >
             {/* Sets table header */}
-            <div className="grid grid-cols-4 gap-2 text-center text-[11px] font-semibold text-[var(--color-muted-foreground)]">
+            <div className="grid grid-cols-3 gap-2 text-center text-[11px] font-semibold text-[var(--color-muted-foreground)]">
               <span>סט</span>
               <span>חזרות</span>
               <span>משקל ({unitLabel(unit)})</span>
-              <span>RPE</span>
             </div>
 
             {/* Sets rows */}
@@ -441,7 +440,7 @@ function ViewExerciseCard({ ex, unit }) {
               return (
                 <div
                   key={s.id || i}
-                  className={`grid grid-cols-4 gap-2 rounded-xl border px-2.5 py-2.5 text-center ${
+                  className={`grid grid-cols-3 gap-2 rounded-xl border px-2.5 py-2.5 text-center ${
                     isBest
                       ? 'border-[var(--color-volt)]/30 bg-[var(--color-volt)]/[0.06]'
                       : 'border-[var(--hairline)] bg-white/[0.025]'
@@ -453,9 +452,6 @@ function ViewExerciseCard({ ex, unit }) {
                   </span>
                   <span className="tnum text-sm font-bold text-[var(--color-card-foreground)]">
                     {s.weight ? fmtWeight(s.weight, unit) : '—'}
-                  </span>
-                  <span className="tnum text-sm font-bold text-[var(--color-card-foreground)]">
-                    {s.rpe || '—'}
                   </span>
                 </div>
               );
@@ -588,11 +584,10 @@ function EditExerciseCard({ ex, exIdx, unit, draft, setDraft }) {
             className="flex flex-col gap-2.5 overflow-hidden"
           >
             {/* Sets table header */}
-            <div className="hidden grid-cols-[1.7rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_2.2rem] gap-1.5 text-center text-[11px] font-semibold text-[var(--color-muted-foreground)] sm:grid">
+            <div className="hidden grid-cols-[1.7rem_minmax(0,1fr)_minmax(0,1fr)_2.2rem] gap-1.5 text-center text-[11px] font-semibold text-[var(--color-muted-foreground)] sm:grid">
               <span>סט</span>
               <span>חזרות</span>
               <span>משקל ({unitLabel(unit)})</span>
-              <span>RPE</span>
               <span />
             </div>
 
@@ -600,7 +595,7 @@ function EditExerciseCard({ ex, exIdx, unit, draft, setDraft }) {
             {(ex.sets || []).map((s, i) => (
               <div
                 key={s.id || i}
-                className="grid grid-cols-1 gap-2 rounded-xl border border-[var(--hairline)] bg-white/[0.025] p-2.5 sm:grid-cols-[1.7rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.8fr)_2.2rem] sm:items-center sm:gap-1.5 sm:border-0 sm:bg-transparent sm:p-0"
+                className="grid grid-cols-1 gap-2 rounded-xl border border-[var(--hairline)] bg-white/[0.025] p-2.5 sm:grid-cols-[1.7rem_minmax(0,1fr)_minmax(0,1fr)_2.2rem] sm:items-center sm:gap-1.5 sm:border-0 sm:bg-transparent sm:p-0"
               >
                 <span className="flex items-center justify-between text-xs font-semibold text-[var(--color-muted-foreground)] sm:block sm:text-center">
                   <span className="sm:hidden">סט</span>
@@ -627,21 +622,6 @@ function EditExerciseCard({ ex, exIdx, unit, draft, setDraft }) {
                     placeholder="—"
                     className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-base font-bold text-[var(--color-card-foreground)] outline-none focus:bg-white/10 sm:w-full"
                     aria-label={`משקל סט ${i + 1}`}
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-xs font-semibold text-[var(--color-muted-foreground)] sm:block">
-                  <span className="sm:hidden">RPE</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min="1"
-                    max="10"
-                    step="0.5"
-                    value={s.rpe || ''}
-                    onChange={(e) => updateSet(i, { rpe: e.target.value })}
-                    placeholder="—"
-                    className="tnum min-w-0 rounded-xl bg-white/5 py-2.5 text-center text-sm font-bold text-[var(--color-card-foreground)] outline-none focus:bg-white/10 sm:w-full"
-                    aria-label={`RPE סט ${i + 1}`}
                   />
                 </label>
                 {ex.sets.length > 1 && (

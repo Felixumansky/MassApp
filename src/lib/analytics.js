@@ -1,7 +1,7 @@
 /* Pure, testable analytics selectors over the saved `workouts` array.
    Everything here is side-effect free so it can be unit-tested in isolation
    and reused across pages. Weights are the canonical kg stored on each set. */
-import { epley1rm, dayKey, shortDateHe } from './utils.js';
+import { epley1rm } from './utils.js';
 import { LEGACY_ALIASES } from './exercises.js';
 
 /* ── Feature 1: weekly working-set balance per muscle group ───────────────
@@ -119,56 +119,4 @@ export function suggestNextSet(lastExercise, targetReps, stepKg = 2.5) {
   if (reps < hi) return { weight, reps: reps + 1 };
   // reached the top of the rep range → add load (if weighted) and reset reps
   return weight > 0 ? { weight: weight + stepKg, reps: lo } : { weight, reps: reps + 1 };
-}
-
-/* ── Feature 4: RPE / intensity analytics ─────────────────────────────────── */
-
-/** Any completed set carries a usable RPE? Gate the whole section on this. */
-export function hasAnyRpe(workouts) {
-  for (const w of workouts || []) {
-    for (const ex of w.exercises || []) {
-      for (const s of ex.sets || []) {
-        if (s.done && Number(s.rpe) > 0) return true;
-      }
-    }
-  }
-  return false;
-}
-
-/** Per-week [{ label, hardSets, totalSets, avgRpe }] for the last `weeks` weeks.
-    hard = RPE ≥ 7; avgRpe ignores sets without an RPE (0 when none). */
-export function weeklyRpeStats(workouts, weeks = 8) {
-  const buckets = [];
-  for (let i = weeks - 1; i >= 0; i--) {
-    const end = new Date();
-    end.setDate(end.getDate() - i * 7);
-    const startKey = dayKey(new Date(end.getTime() - 6 * 864e5));
-    const endKey = dayKey(end);
-    let hardSets = 0;
-    let totalSets = 0;
-    let rpeSum = 0;
-    let rpeCount = 0;
-    for (const w of workouts || []) {
-      if (w.date < startKey || w.date > endKey) continue;
-      for (const ex of w.exercises || []) {
-        for (const s of ex.sets || []) {
-          if (!s.done || !(Number(s.reps) > 0)) continue;
-          totalSets += 1;
-          const rpe = Number(s.rpe);
-          if (rpe > 0) {
-            rpeSum += rpe;
-            rpeCount += 1;
-            if (rpe >= 7) hardSets += 1;
-          }
-        }
-      }
-    }
-    buckets.push({
-      label: shortDateHe(endKey),
-      hardSets,
-      totalSets,
-      avgRpe: rpeCount ? Math.round((rpeSum / rpeCount) * 10) / 10 : 0,
-    });
-  }
-  return buckets;
 }

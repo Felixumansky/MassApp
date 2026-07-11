@@ -8,8 +8,6 @@ import {
   lastSessionExercise,
   parseRepRange,
   suggestNextSet,
-  hasAnyRpe,
-  weeklyRpeStats,
 } from './analytics.js';
 
 const wk = (date, exercises) => ({ id: date, date, exercises });
@@ -127,29 +125,5 @@ describe('suggestNextSet', () => {
   it('returns null with no history', () => {
     expect(suggestNextSet(null, '8-12')).toBe(null);
     expect(suggestNextSet({ sets: [] }, '8-12')).toBe(null);
-  });
-});
-
-describe('RPE analytics', () => {
-  it('detects presence of any usable RPE', () => {
-    expect(hasAnyRpe([wk('2026-06-20', [{ muscle: 'chest', sets: [set('8', '60', { rpe: '8' })] }])])).toBe(true);
-    expect(hasAnyRpe([wk('2026-06-20', [{ muscle: 'chest', sets: [set('8', '60')] }])])).toBe(false);
-  });
-
-  it('computes weekly hard/total counts and average, ignoring missing RPE', () => {
-    const today = new Date().toISOString().slice(0, 10);
-    const workouts = [
-      wk(today, [
-        {
-          muscle: 'chest',
-          sets: [set('8', '60', { rpe: '8' }), set('8', '60', { rpe: '6' }), set('8', '60')],
-        },
-      ]),
-    ];
-    const stats = weeklyRpeStats(workouts, 8);
-    const current = stats.at(-1);
-    expect(current.totalSets).toBe(3);
-    expect(current.hardSets).toBe(1); // only the RPE 8 set
-    expect(current.avgRpe).toBe(7); // (8+6)/2, the un-rated set ignored
   });
 });

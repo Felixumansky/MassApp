@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Plus, Pencil, Trash2, X, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
+import { Play, Plus, Pencil, Copy, Trash2, X, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, MuscleTag, EmptyState } from '../components/ui.jsx';
 import ExercisePicker from '../components/ExercisePicker.jsx';
@@ -23,6 +23,11 @@ export default function Routines() {
   function deleteRoutine(routine) {
     if (!confirm(`למחוק את "${routine.name || 'תוכנית ללא שם'}"?`)) return;
     dispatch({ type: 'deleteRoutine', id: routine.id });
+  }
+
+  function duplicateRoutine(routine) {
+    vibrate(10);
+    dispatch({ type: 'duplicateRoutine', id: routine.id });
   }
 
   return (
@@ -61,6 +66,9 @@ export default function Routines() {
                     <div className="flex gap-1">
                       <button onClick={() => setEditing({ ...r })} className="press flex size-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)]" aria-label="ערוך">
                         <Pencil className="size-4" />
+                      </button>
+                      <button onClick={() => duplicateRoutine(r)} className="press flex size-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)]" aria-label="שכפל">
+                        <Copy className="size-4" />
                       </button>
                       <button onClick={() => deleteRoutine(r)} className="press flex size-8 items-center justify-center rounded-lg text-[var(--color-muted-foreground)]" aria-label="מחק">
                         <Trash2 className="size-4" />
