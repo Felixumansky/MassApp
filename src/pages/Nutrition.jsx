@@ -1,9 +1,10 @@
-import { lazy, Suspense, useMemo, useState } from 'react';
-import { Apple, ChartPie, Droplets, Plus, Settings2, UtensilsCrossed, X } from 'lucide-react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Apple, ChartPie, ChevronLeft, ChevronRight, Droplets, Plus, Settings2, UtensilsCrossed, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store.jsx';
 import { PageHeader, GlassCard, EmptyState, AppLoader } from '../components/ui.jsx';
-import { dayKey, vibrate } from '../lib/utils.js';
+import { dayKey, formatDateHe, vibrate } from '../lib/utils.js';
 import { useDialogFocus } from '../lib/useDialogFocus.js';
 import {
   MEAL_TYPES,
@@ -27,17 +28,38 @@ const WATER_QUICK = [
 export default function Nutrition() {
   const { state, dispatch } = useStore();
   const { meals, waterLogs, nutritionGoals } = state;
+  const location = useLocation();
+  const navigate = useNavigate();
   const today = dayKey();
 
   const [view, setView] = useState('today'); // 'today' | 'stats'
+  const [selectedDate, setSelectedDate] = useState(today);
   const [adding, setAdding] = useState(false);
   const [editingMeal, setEditingMeal] = useState(null); // meal being viewed/edited
   const [goalsOpen, setGoalsOpen] = useState(false);
+  const isToday = selectedDate === today;
 
-  const totals = useMemo(() => dayTotals(meals, waterLogs, today), [meals, waterLogs, today]);
-  const grouped = useMemo(() => mealsByType(meals, today), [meals, today]);
+  // The + FAB lands here with { addMeal: nonce } — always log to today.
+  useEffect(() => {
+    if (location.state?.addMeal) {
+      setView('today');
+      setSelectedDate(dayKey());
+      setAdding(true);
+      navigate(location.pathname, { replace: true, state: null }); // שלא ייפתח שוב ב-back/רענון
+    }
+  }, [location.state?.addMeal]);
+
+  const totals = useMemo(() => dayTotals(meals, waterLogs, selectedDate), [meals, waterLogs, selectedDate]);
+  const grouped = useMemo(() => mealsByType(meals, selectedDate), [meals, selectedDate]);
   const message = useMemo(() => encouragementMessage(totals, nutritionGoals), [totals, nutritionGoals]);
-  const hasMealsToday = MEAL_TYPES.some((t) => grouped[t.id].length > 0);
+  const hasMeals = MEAL_TYPES.some((t) => grouped[t.id].length > 0);
+
+  function shiftDay(delta) {
+    vibrate(5);
+    const d = new Date(selectedDate + 'T00:00:00');
+    d.setDate(d.getDate() + delta);
+    setSelectedDate(dayKey(d));
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -64,12 +86,44 @@ export default function Nutrition() {
         </Suspense>
       ) : (
         <>
+          {/* ניווט בין ימים — עבר בימין (RTL), קדימה בשמאל */}
+          <div className="glass flex items-center justify-between rounded-2xl px-2 py-2">
+            <button
+              onClick={() => shiftDay(-1)}
+              aria-label="יום קודם"
+              className="press flex size-10 shrink-0 items-center justify-center rounded-xl"
+            >
+              <ChevronRight className="size-5" />
+            </button>
+            <button
+              onClick={() => { if (!isToday) { vibrate(5); setSelectedDate(today); } }}
+              disabled={isToday}
+              className="press flex min-w-0 flex-col items-center px-2"
+              aria-label={isToday ? undefined : 'חזרה להיום'}
+            >
+              <span className="truncate text-sm font-bold">{formatDateHe(selectedDate)}</span>
+              <span className="text-[0.7rem] font-semibold text-[var(--color-muted-foreground)]">
+                {isToday ? 'היום' : 'הקישו לחזרה להיום'}
+              </span>
+            </button>
+            <button
+              onClick={() => shiftDay(1)}
+              disabled={isToday}
+              aria-label="יום הבא"
+              className={`press flex size-10 shrink-0 items-center justify-center rounded-xl ${isToday ? 'opacity-30' : ''}`}
+            >
+              <ChevronLeft className="size-5" />
+            </button>
+          </div>
+
           {/* טבעת קלוריות + פסי מאקרו */}
           <GlassCard className="flex flex-col items-center gap-4 py-5">
             <CalorieRing calories={totals.calories} target={nutritionGoals.calories} />
-            <p className="text-center text-sm font-semibold text-[var(--color-muted-foreground)]" aria-live="polite">
-              {message}
-            </p>
+            {isToday && (
+              <p className="text-center text-sm font-semibold text-[var(--color-muted-foreground)]" aria-live="polite">
+                {message}
+              </p>
+            )}
             <div className="flex w-full flex-col gap-2.5">
               {MACROS.map((mac) => (
                 <MacroBar key={mac.id} macro={mac} value={totals[mac.id]} target={nutritionGoals[mac.id]} />
@@ -102,7 +156,7 @@ export default function Nutrition() {
               {WATER_QUICK.map((w) => (
                 <button
                   key={w.ml}
-                  onClick={() => { vibrate(8); dispatch({ type: 'addWater', amountMl: w.ml }); }}
+                  onClick={() => { vibrate(8); dispatch({ type: 'addWater', amountMl: w.ml, date: selectedDate }); }}
                   className="press glass flex-1 rounded-xl py-2.5 text-xs font-bold"
                 >
                   💧 {w.label}
@@ -111,11 +165,11 @@ export default function Nutrition() {
             </div>
           </GlassCard>
 
-          {/* ארוחות היום */}
-          {!hasMealsToday ? (
+          {/* ארוחות היום הנבחר */}
+          {!hasMeals ? (
             <EmptyState
               icon={UtensilsCrossed}
-              title="אין ארוחות היום"
+              title={isToday ? 'אין ארוחות היום' : 'אין ארוחות ביום זה'}
               hint="צלמו את הצלחת, דברו, או חפשו בקטלוג — ותראו כמה קלוריות ומה אכלתם."
               action={
                 <button onClick={() => { vibrate(8); setAdding(true); }} className="btn-volt press rounded-2xl px-6 py-3 text-sm font-bold">
@@ -161,6 +215,7 @@ export default function Nutrition() {
       <AnimatePresence>
         {adding && (
           <AddFoodSheet
+            date={selectedDate}
             onClose={() => setAdding(false)}
             onSaved={() => setAdding(false)}
           />

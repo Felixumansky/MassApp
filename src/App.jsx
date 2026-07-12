@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import AuroraBackground from './components/AuroraBackground.jsx';
@@ -30,13 +30,19 @@ const page = (El) => (
   </PageTransition>
 );
 
+// Resets only on a full page load, so the nutrition redirect fires once per app
+// entry and the בית tab still reaches the Dashboard afterwards.
+let entryHandled = false;
+
 function AnimatedRoutes() {
   const location = useLocation();
   const { user } = useCloud();
+  const entryRedirect = !entryHandled && canUseNutrition(user);
+  useEffect(() => { entryHandled = true; }, []);
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={page(Dashboard)} />
+        <Route path="/" element={entryRedirect ? <Navigate to="/nutrition" replace /> : page(Dashboard)} />
         <Route path="/workout" element={page(ActiveWorkout)} />
         <Route path="/workout/:id" element={page(WorkoutDetail)} />
         <Route path="/library" element={page(Library)} />
@@ -46,7 +52,7 @@ function AnimatedRoutes() {
         <Route path="/weight" element={page(Weight)} />
         <Route path="/nutrition" element={canUseNutrition(user) ? page(Nutrition) : <Navigate to="/" replace />} />
         <Route path="/profile" element={page(Profile)} />
-        <Route path="*" element={page(Dashboard)} />
+        <Route path="*" element={entryRedirect ? <Navigate to="/nutrition" replace /> : page(Dashboard)} />
       </Routes>
     </AnimatePresence>
   );

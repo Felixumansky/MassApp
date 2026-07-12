@@ -22,9 +22,17 @@ export default function BottomNav() {
   const navigate = useNavigate();
   const [typePicker, setTypePicker] = useState(false);
   const timerRunning = !!state.restTimer?.open;
-  const visibleItems = items.filter((it) => it.to !== '/nutrition' || canUseNutrition(user));
+  const nutritionUser = canUseNutrition(user);
+  const visibleItems = items.filter((it) => it.to !== '/nutrition' || nutritionUser);
 
   function startOrResume() {
+    // For nutrition users the + is dedicated to logging a meal, even mid-workout;
+    // the rest timer is stopped from the workout screen instead.
+    if (nutritionUser) {
+      vibrate(8);
+      navigate('/nutrition', { state: { addMeal: Date.now() } });
+      return;
+    }
     // Mid-workout, while the rest timer is running, the + turns into a stop
     // button: one tap stops the timer and closes it instead of navigating.
     if (timerRunning) {
@@ -52,15 +60,15 @@ export default function BottomNav() {
 
       <button
         onClick={startOrResume}
-        className={`press relative -mt-7 flex size-14 shrink-0 items-center justify-center rounded-full ${timerRunning ? 'bg-rose-500 text-white shadow-[0_8px_24px_rgba(244,63,94,0.45)]' : 'btn-volt'}`}
-        aria-label={timerRunning ? 'עצור טיימר' : state.active ? 'המשך אימון' : 'התחל אימון'}
+        className={`press relative -mt-7 flex size-14 shrink-0 items-center justify-center rounded-full ${timerRunning && !nutritionUser ? 'bg-rose-500 text-white shadow-[0_8px_24px_rgba(244,63,94,0.45)]' : 'btn-volt'}`}
+        aria-label={nutritionUser ? 'הוספת ארוחה' : timerRunning ? 'עצור טיימר' : state.active ? 'המשך אימון' : 'התחל אימון'}
       >
-        {timerRunning ? (
+        {timerRunning && !nutritionUser ? (
           <TimerOff className="size-7" strokeWidth={2.6} />
         ) : (
           <Plus className="size-7" strokeWidth={2.6} />
         )}
-        {state.active && !timerRunning && (
+        {state.active && !timerRunning && !nutritionUser && (
           <span className="absolute -end-0.5 -top-0.5 size-3.5 rounded-full bg-rose-500 ring-2 ring-[#07090a] pulse-glow" />
         )}
       </button>

@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Home, CalendarDays, Apple, Dumbbell, ClipboardList, TrendingUp, Scale, User, Zap, Play, LogOut } from 'lucide-react';
+import { Home, CalendarDays, Apple, Dumbbell, ClipboardList, TrendingUp, Scale, User, Zap, Play, Plus, LogOut } from 'lucide-react';
 import { useStore } from '../store.jsx';
 import { useCloud } from '../cloud.jsx';
 import { canUseNutrition } from '../lib/nutritionAccess.js';
@@ -20,7 +20,8 @@ export default function Sidebar() {
   const { state, dispatch } = useStore();
   const { user, logout } = useCloud();
   const navigate = useNavigate();
-  const visibleLinks = links.filter((l) => l.to !== '/nutrition' || canUseNutrition(user));
+  const nutritionUser = canUseNutrition(user);
+  const visibleLinks = links.filter((l) => l.to !== '/nutrition' || nutritionUser);
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-6 p-6 lg:flex">
@@ -73,12 +74,21 @@ export default function Sidebar() {
         </div>
       )}
 
+      {nutritionUser && (
+        <button
+          onClick={() => navigate('/nutrition', { state: { addMeal: Date.now() } })}
+          className={`btn-volt press flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold ${user ? 'mt-3' : 'mt-auto'}`}
+        >
+          <Plus className="size-4" strokeWidth={2.6} />
+          הוספת ארוחה
+        </button>
+      )}
       <button
         onClick={() => {
           if (!state.active) dispatch({ type: 'startWorkout' });
           navigate('/workout');
         }}
-        className={`btn-volt press flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold ${user ? 'mt-3' : 'mt-auto'}`}
+        className={`press flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold ${nutritionUser ? 'glass mt-2' : `btn-volt ${user ? 'mt-3' : 'mt-auto'}`}`}
       >
         <Play className="size-4" fill="currentColor" />
         {state.active ? 'המשך אימון' : 'התחל אימון'}

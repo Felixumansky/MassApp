@@ -20,7 +20,7 @@ const MODES = [
   { id: 'type', label: 'הקלדה', icon: Keyboard },
 ];
 
-export default function AddFoodSheet({ onClose, onSaved }) {
+export default function AddFoodSheet({ onClose, onSaved, date }) {
   const { state, dispatch } = useStore();
   const { token } = useCloud();
   const speech = useSpeech();
@@ -73,7 +73,7 @@ export default function AddFoodSheet({ onClose, onSaved }) {
     vibrate(10);
     dispatch({
       type: 'addMeal',
-      meal: { items, mealType, source: review.source, photo: review.photoThumb },
+      meal: { items, mealType, source: review.source, photo: review.photoThumb, ...(date ? { date } : null) },
     });
     onSaved();
   }

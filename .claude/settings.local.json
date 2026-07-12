@@ -10,7 +10,9 @@
       "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:4000/api/health\" -UseBasicParsing -TimeoutSec 5; \"HEALTH: $\\($r.StatusCode\\) $\\($r.Content\\)\" } catch { \"ERR: $\\($_.Exception.Message\\)\" })",
       "Bash(npx eslint *)",
       "Bash(echo \"---EXIT:$?---\")",
-      "PowerShell(npm run build)"
+      "PowerShell(npm run build)",
+      "PowerShell(npx vitest run 2>$null)",
+      "PowerShell(npm run build 2>$null)"
     ],
     "additionalDirectories": [
       "c:\\Users\\DEV\\Desktop\\GitHub\\GitHub\\MassAPI\\src\\routes"
