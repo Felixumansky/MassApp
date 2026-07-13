@@ -124,16 +124,16 @@ export function CloudProvider({ children }) {
       setStatus('syncing');
       setError('');
       try {
-        const { state: server, updatedAt } = await api.getState(token);
+        const { state: server, hasState } = await api.getState(token);
         const hasServerData =
-          updatedAt &&
-          (server.workouts?.length ||
+          hasState ||
+          server.workouts?.length ||
             server.routines?.length ||
             server.bodyWeights?.length ||
             server.customExercises?.length ||
             server.meals?.length ||
             server.waterLogs?.length ||
-            server.customFoods?.length);
+            server.customFoods?.length;
         if (hasServerData) {
           // The DB is the single source of truth — mirror it exactly, no local merge.
           dispatch({ type: 'replaceAll', data: server });
