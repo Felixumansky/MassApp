@@ -1,10 +1,24 @@
 import { createContext, useContext, useMemo, useReducer } from 'react';
-import { uid, dayKey } from './lib/utils.js';
+import { uid, dayKey, normalizeDateKey } from './lib/utils.js';
 import { resolveExercise, routineExerciseId, routineExerciseTargets } from './lib/exercises.js';
 
 /** Resolve an exercise id from the built-in library OR the user's custom ones. */
 function findEx(state, id) {
   return resolveExercise(id, state.customExercises);
+}
+
+function normalizeMeals(meals) {
+  return (Array.isArray(meals) ? meals : []).map((meal) => ({
+    ...meal,
+    date: normalizeDateKey(meal.date),
+  }));
+}
+
+function normalizeWaterLogs(logs) {
+  return (Array.isArray(logs) ? logs : []).map((log) => ({
+    ...log,
+    date: normalizeDateKey(log.date),
+  }));
 }
 
 /** Most recent saved workout of the same type. Matches by routineId (new data)
@@ -184,8 +198,8 @@ export function reducer(state, action) {
         bodyWeights: action.data.bodyWeights || [],
         customExercises: action.data.customExercises || [],
         exerciseImages: action.data.exerciseImages || state.exerciseImages || {},
-        meals: action.data.meals || [],
-        waterLogs: action.data.waterLogs || [],
+        meals: normalizeMeals(action.data.meals),
+        waterLogs: normalizeWaterLogs(action.data.waterLogs),
         customFoods: action.data.customFoods || [],
         nutritionGoals: normalizeNutritionGoals(action.data.nutritionGoals || state.nutritionGoals),
         deletedIds: action.data.deletedIds || state.deletedIds || [],

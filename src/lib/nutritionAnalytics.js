@@ -1,6 +1,6 @@
 /* Pure, testable selectors over the nutrition slices (meals / waterLogs / goals).
    Side-effect free, בדומה ל-analytics.js של האימונים. תאריכים הם dayKey מקומי. */
-import { dayKey } from './utils.js';
+import { dayKey, normalizeDateKey } from './utils.js';
 
 export const MEAL_TYPES = [
   { id: 'breakfast', label: 'בוקר', emoji: '🌅' },
@@ -34,7 +34,7 @@ export function mealTotals(meal) {
 export function dayTotals(meals, waterLogs, date = dayKey()) {
   const totals = { calories: 0, protein: 0, carbs: 0, fat: 0, waterMl: 0 };
   for (const m of meals || []) {
-    if (m.date !== date) continue;
+    if (normalizeDateKey(m.date) !== date) continue;
     const t = mealTotals(m);
     totals.calories += t.calories;
     totals.protein = r1(totals.protein + t.protein);
@@ -42,7 +42,7 @@ export function dayTotals(meals, waterLogs, date = dayKey()) {
     totals.fat = r1(totals.fat + t.fat);
   }
   for (const w of waterLogs || []) {
-    if (w.date === date) totals.waterMl += Number(w.amountMl) || 0;
+    if (normalizeDateKey(w.date) === date) totals.waterMl += Number(w.amountMl) || 0;
   }
   return totals;
 }
@@ -51,7 +51,7 @@ export function dayTotals(meals, waterLogs, date = dayKey()) {
 export function mealsByType(meals, date = dayKey()) {
   const out = Object.fromEntries(MEAL_TYPES.map((t) => [t.id, []]));
   for (const m of meals || []) {
-    if (m.date !== date) continue;
+    if (normalizeDateKey(m.date) !== date) continue;
     (out[m.mealType] || out.snack).push(m);
   }
   return out;
@@ -63,8 +63,9 @@ export function caloriesByDay(meals, days = 7, end = dayKey()) {
   const byDate = new Map();
   for (const m of meals || []) {
     const t = mealTotals(m);
-    const cur = byDate.get(m.date) || { calories: 0, protein: 0, carbs: 0, fat: 0 };
-    byDate.set(m.date, {
+    const dateKeyValue = normalizeDateKey(m.date);
+    const cur = byDate.get(dateKeyValue) || { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    byDate.set(dateKeyValue, {
       calories: cur.calories + t.calories,
       protein: r1(cur.protein + t.protein),
       carbs: r1(cur.carbs + t.carbs),
@@ -87,8 +88,9 @@ export function caloriesByDay(meals, days = 7, end = dayKey()) {
 export function macroDistribution(meals, startKey, endKey) {
   const grams = { protein: 0, carbs: 0, fat: 0 };
   for (const m of meals || []) {
-    if (startKey && m.date < startKey) continue;
-    if (endKey && m.date > endKey) continue;
+    const dateKeyValue = normalizeDateKey(m.date);
+    if (startKey && dateKeyValue < startKey) continue;
+    if (endKey && dateKeyValue > endKey) continue;
     const t = mealTotals(m);
     grams.protein = r1(grams.protein + t.protein);
     grams.carbs = r1(grams.carbs + t.carbs);
@@ -109,8 +111,9 @@ export function macroDistribution(meals, startKey, endKey) {
 export function mealTypeDistribution(meals, startKey, endKey) {
   const kcalByType = Object.fromEntries(MEAL_TYPES.map((t) => [t.id, 0]));
   for (const m of meals || []) {
-    if (startKey && m.date < startKey) continue;
-    if (endKey && m.date > endKey) continue;
+    const dateKeyValue = normalizeDateKey(m.date);
+    if (startKey && dateKeyValue < startKey) continue;
+    if (endKey && dateKeyValue > endKey) continue;
     const type = m.mealType in kcalByType ? m.mealType : 'snack';
     kcalByType[type] += mealTotals(m).calories;
   }

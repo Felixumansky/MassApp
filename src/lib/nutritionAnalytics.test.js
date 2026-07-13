@@ -61,6 +61,12 @@ describe('mealsByType', () => {
     expect(g.snack).toHaveLength(1);
     expect(g.lunch).toHaveLength(0);
   });
+
+  it('shows meals stored as an ISO timestamp on the matching local day', () => {
+    const meals = [meal('2026-07-13T08:30:00.000Z', 'breakfast', [item(100)])];
+    const g = mealsByType(meals, '2026-07-13');
+    expect(g.breakfast).toHaveLength(1);
+  });
 });
 
 describe('caloriesByDay', () => {

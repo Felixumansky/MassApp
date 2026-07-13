@@ -18,6 +18,14 @@ export function dayKey(d = new Date()) {
   return x.toISOString().slice(0, 10);
 }
 
+/** Normalize stored date values so legacy ISO timestamps still match a day. */
+export function normalizeDateKey(value) {
+  const raw = String(value ?? '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? raw : dayKey(parsed);
+}
+
 const HE_DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
 const HE_MONTHS = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'];
 
