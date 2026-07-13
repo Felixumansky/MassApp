@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from './lib/api.js';
 import { useStore } from './store.jsx';
-import { mergeLocalAddsIntoServer } from './lib/cloudState.js';
+import { mergeLocalStateIntoServer } from './lib/cloudState.js';
 import { biometricEnabled, registerBiometric, verifyBiometric, disableBiometric } from './lib/biometric.js';
 
 const AUTH_KEY = 'liftlog.auth';
@@ -127,14 +127,9 @@ export function CloudProvider({ children }) {
     async (token) => {
       setStatus('syncing');
       setError('');
-      const pullBaseline = latestSlice.current || slice;
       try {
         const { state: server, hasState } = await api.getState(token);
-        const reconciledServer = mergeLocalAddsIntoServer(
-          server,
-          latestSlice.current || slice,
-          pullBaseline
-        );
+        const reconciledServer = mergeLocalStateIntoServer(server, latestSlice.current || slice);
         const hasServerData =
           hasState ||
           reconciledServer.workouts?.length ||

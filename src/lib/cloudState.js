@@ -9,30 +9,26 @@ const SYNC_COLLECTIONS = [
 ];
 
 /**
- * Keep items created while the initial server pull was in flight.
+ * Keep local items that are missing from the server response.
  *
- * The server remains authoritative for the state that existed when the pull
- * started. A newly-created local item has an id that was not in that baseline,
- * so it can be safely merged back instead of being lost by replaceAll.
+ * This covers both a write that was still in flight during the initial pull
+ * and a recoverable local cache that predates a stale/incomplete server state.
+ * Explicit tombstones still win, so deleted items are never resurrected.
  */
-export function mergeLocalAddsIntoServer(serverState, localState, pullBaseline) {
+export function mergeLocalStateIntoServer(serverState, localState) {
   const server = serverState && typeof serverState === 'object' ? serverState : {};
   const local = localState && typeof localState === 'object' ? localState : {};
-  const baseline = pullBaseline && typeof pullBaseline === 'object' ? pullBaseline : {};
   const deletedIds = new Set([...(server.deletedIds || []), ...(local.deletedIds || [])]);
   const next = { ...server };
 
   for (const key of SYNC_COLLECTIONS) {
     const serverItems = Array.isArray(server[key]) ? server[key] : [];
     const serverIds = new Set(serverItems.map((item) => item?.id).filter(Boolean));
-    const baselineIds = new Set(
-      (Array.isArray(baseline[key]) ? baseline[key] : []).map((item) => item?.id).filter(Boolean)
-    );
-    const localAdds = (Array.isArray(local[key]) ? local[key] : []).filter(
-      (item) => item?.id && !baselineIds.has(item.id) && !serverIds.has(item.id) && !deletedIds.has(item.id)
+    const localMissing = (Array.isArray(local[key]) ? local[key] : []).filter(
+      (item) => item?.id && !serverIds.has(item.id) && !deletedIds.has(item.id)
     );
 
-    next[key] = [...serverItems, ...localAdds].filter((item) => !deletedIds.has(item?.id));
+    next[key] = [...serverItems, ...localMissing].filter((item) => !deletedIds.has(item?.id));
   }
 
   next.deletedIds = [...deletedIds].slice(-1000);

@@ -1,16 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { mergeLocalAddsIntoServer } from './cloudState.js';
+import { mergeLocalStateIntoServer } from './cloudState.js';
 
-describe('mergeLocalAddsIntoServer', () => {
-  it('keeps a meal added while the initial pull is in flight', () => {
-    const baseline = { meals: [{ id: 'old', date: '2026-07-13' }] };
+describe('mergeLocalStateIntoServer', () => {
+  it('keeps a local meal missing from the server response', () => {
     const local = {
-      meals: [...baseline.meals, { id: 'new', date: '2026-07-13' }],
+      meals: [{ id: 'old', date: '2026-07-13' }, { id: 'new', date: '2026-07-13' }],
       deletedIds: [],
     };
-    const server = { meals: baseline.meals };
+    const server = { meals: [{ id: 'old', date: '2026-07-13' }] };
 
-    const result = mergeLocalAddsIntoServer(server, local, baseline);
+    const result = mergeLocalStateIntoServer(server, local);
 
     expect(result.meals.map((meal) => meal.id)).toEqual(['old', 'new']);
   });
@@ -20,7 +19,7 @@ describe('mergeLocalAddsIntoServer', () => {
     const local = { meals: [], deletedIds: ['deleted'] };
     const server = { meals: baseline.meals, deletedIds: [] };
 
-    const result = mergeLocalAddsIntoServer(server, local, baseline);
+    const result = mergeLocalStateIntoServer(server, local);
 
     expect(result.meals).toEqual([]);
     expect(result.deletedIds).toContain('deleted');
