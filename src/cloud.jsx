@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from './lib/api.js';
 import { useStore } from './store.jsx';
+import { mergeLocalAddsIntoServer } from './lib/cloudState.js';
 import { biometricEnabled, registerBiometric, verifyBiometric, disableBiometric } from './lib/biometric.js';
 
 const AUTH_KEY = 'liftlog.auth';
@@ -126,21 +127,28 @@ export function CloudProvider({ children }) {
     async (token) => {
       setStatus('syncing');
       setError('');
+      const pullBaseline = latestSlice.current || slice;
       try {
         const { state: server, hasState } = await api.getState(token);
+        const reconciledServer = mergeLocalAddsIntoServer(
+          server,
+          latestSlice.current || slice,
+          pullBaseline
+        );
         const hasServerData =
           hasState ||
-          server.workouts?.length ||
-            server.routines?.length ||
-            server.bodyWeights?.length ||
-            server.customExercises?.length ||
-            server.meals?.length ||
-            server.waterLogs?.length ||
-            server.customFoods?.length;
+          reconciledServer.workouts?.length ||
+            reconciledServer.routines?.length ||
+            reconciledServer.bodyWeights?.length ||
+            reconciledServer.customExercises?.length ||
+            reconciledServer.meals?.length ||
+            reconciledServer.waterLogs?.length ||
+            reconciledServer.customFoods?.length;
         if (hasServerData) {
-          // The DB is the single source of truth — mirror it exactly, no local merge.
-          dispatch({ type: 'replaceAll', data: server });
-          saveCache(server);
+          // The DB is authoritative for the pulled state; retain only items
+          // created locally after the pull began so they are not discarded.
+          dispatch({ type: 'replaceAll', data: reconciledServer });
+          saveCache(reconciledServer);
         } else {
           // Empty account: seed the DB from the current in-memory (starter) state.
           await api.putState(token, latestSlice.current || slice);
