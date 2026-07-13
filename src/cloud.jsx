@@ -5,6 +5,7 @@ import { biometricEnabled, registerBiometric, verifyBiometric, disableBiometric 
 
 const AUTH_KEY = 'liftlog.auth';
 const UNLOCK_KEY = 'liftlog.unlockUntil'; // remember a biometric unlock for a while
+const CACHE_KEY = 'liftlog.stateCache'; // last synced slice, for instant startup
 const MONTH_MS = 30 * 864e5; // keep the session alive for a month
 const Ctx = createContext(null);
 
@@ -40,6 +41,29 @@ function loadAuth() {
 
 function shouldLockSavedSession() {
   return !!(loadAuth() && biometricEnabled() && !unlockFresh());
+}
+
+// Local mirror of the last synced slice. The DB stays the single source of
+// truth — this only lets the UI render real data immediately on launch while
+// the server pull runs in the background.
+function loadCache() {
+  try {
+    return JSON.parse(localStorage.getItem(CACHE_KEY));
+  } catch {
+    return null;
+  }
+}
+
+function saveCache(slice) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(slice));
+  } catch {
+    // Quota exceeded — skip; the next app open just falls back to the server pull.
+  }
+}
+
+function clearCache() {
+  localStorage.removeItem(CACHE_KEY);
 }
 
 /** Cloud auth + DB-backed state: pull the state from the server, push every change. */
@@ -113,9 +137,11 @@ export function CloudProvider({ children }) {
         if (hasServerData) {
           // The DB is the single source of truth — mirror it exactly, no local merge.
           dispatch({ type: 'replaceAll', data: server });
+          saveCache(server);
         } else {
           // Empty account: seed the DB from the current in-memory (starter) state.
           await api.putState(token, latestSlice.current || slice);
+          saveCache(latestSlice.current || slice);
         }
         markReady();
         setStatus('synced');
@@ -162,6 +188,7 @@ export function CloudProvider({ children }) {
     // Wipe the local cache — otherwise this device keeps showing the logged-out
     // user's workouts/routines (privacy on shared devices), and a stale copy can
     // resurface a deleted workout that the cloud has already tombstoned.
+    clearCache();
     dispatch({ type: 'resetAll' });
   }
 
@@ -174,6 +201,7 @@ export function CloudProvider({ children }) {
     setError('');
     try {
       await api.putState(auth.token, nextSlice);
+      saveCache(nextSlice);
       markReady();
       setStatus('synced');
     } catch (e) {
@@ -206,9 +234,15 @@ export function CloudProvider({ children }) {
     if (auth?.token && !ready.current) reconcile(auth.token);
   }
 
-  // On first mount with a saved token, reconcile (unless waiting on unlock).
+  // On first mount with a saved token: hydrate instantly from the local mirror
+  // (the LockScreen still gates the UI when locked), then reconcile with the
+  // server in the background (unless waiting on unlock). Pushes stay gated on
+  // `ready`, so the cached copy can never overwrite fresher server data.
   useEffect(() => {
-    if (!locked && auth?.token && !ready.current) reconcile(auth.token);
+    if (!auth?.token) return;
+    const cached = loadCache();
+    if (cached) dispatch({ type: 'replaceAll', data: cached });
+    if (!locked && !ready.current) reconcile(auth.token);
   }, []);
 
   // Debounced push whenever the synced slice changes.
@@ -219,6 +253,7 @@ export function CloudProvider({ children }) {
     clearTimeout(pushTimer.current);
     clearTimeout(retryTimer.current);
     pushTimer.current = setTimeout(async () => {
+      saveCache(latestSlice.current); // mirror locally even if the push fails
       try {
         await api.putState(auth.token, latestSlice.current);
         dirty.current = false;
@@ -258,6 +293,7 @@ export function CloudProvider({ children }) {
       if (!auth?.token || !ready.current || !dirty.current) return;
       clearTimeout(pushTimer.current);
       clearTimeout(retryTimer.current);
+      saveCache(latestSlice.current);
       api
         .putState(auth.token, latestSlice.current)
         .then(() => {

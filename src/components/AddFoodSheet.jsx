@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Camera, Keyboard, Mic, Plus, Search, Sparkles, Square, X } from 'lucide-react';
+import { Camera, Image as ImageIcon, Keyboard, Mic, Plus, Search, Sparkles, Square, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../store.jsx';
 import { useCloud } from '../cloud.jsx';
@@ -177,9 +177,12 @@ export default function AddFoodSheet({ onClose, onSaved, date }) {
 
 /* ═══ 📷 תמונה ═══ */
 function PhotoMode({ fileRef, onPick }) {
+  const galleryRef = useRef(null);
   return (
     <div className="flex flex-col gap-3 py-2">
+      {/* capture פותח ישירות מצלמה — לגלריה צריך input נפרד בלעדיו */}
       <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={onPick} className="hidden" />
+      <input ref={galleryRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
       <button
         type="button"
         onClick={() => fileRef.current?.click()}
@@ -188,10 +191,18 @@ function PhotoMode({ fileRef, onPick }) {
         <span className="flex size-16 items-center justify-center rounded-3xl bg-orange-500/15">
           <Camera className="size-7 text-orange-400" />
         </span>
-        <span className="text-sm font-bold">צלמו או בחרו תמונה של הצלחת</span>
+        <span className="text-sm font-bold">צלמו תמונה של הצלחת</span>
         <span className="max-w-56 text-xs text-[var(--color-muted-foreground)]">
           ה-AI יזהה את המאכלים ויעריך קלוריות ומאקרו — תוכלו לתקן לפני השמירה
         </span>
+      </button>
+      <button
+        type="button"
+        onClick={() => galleryRef.current?.click()}
+        className="press flex items-center justify-center gap-2 rounded-2xl border border-white/10 py-3 text-sm font-bold"
+      >
+        <ImageIcon className="size-4 text-orange-400" />
+        בחרו תמונה מהגלריה
       </button>
     </div>
   );

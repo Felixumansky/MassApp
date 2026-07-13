@@ -116,14 +116,16 @@ export default function NutritionCharts({ meals, goals }) {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <ul className="flex flex-1 flex-col gap-2.5">
+            <ul className="flex min-w-0 flex-1 flex-col gap-2.5">
               {macros.map((m) => (
-                <li key={m.id} className="flex items-center gap-2 text-sm">
+                <li key={m.id} className="flex items-center gap-2">
                   <span className="size-2.5 shrink-0 rounded-full" style={{ background: m.color }} />
-                  <span className="font-bold">{m.label}</span>
-                  <span className="tnum ms-auto text-xs font-semibold text-[var(--color-muted-foreground)]">
-                    {m.grams} גר׳ · {m.pct}%
-                  </span>
+                  <div className="min-w-0">
+                    <span className="block text-sm font-bold leading-tight">{m.label}</span>
+                    <span className="tnum block whitespace-nowrap text-xs font-semibold leading-tight text-[var(--color-muted-foreground)]">
+                      {m.grams} גר׳ · {m.pct}%
+                    </span>
+                  </div>
                 </li>
               ))}
             </ul>

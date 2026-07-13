@@ -718,9 +718,10 @@ export function reducer(state, action) {
 const Ctx = createContext(null);
 
 export function StoreProvider({ children }) {
-  // In-memory only — the DB is the single source of truth. Nothing about the
-  // user's data is cached in localStorage; the cloud layer pulls the state on
-  // login and pushes every change straight to the server.
+  // The DB is the single source of truth: the cloud layer pulls the state on
+  // login and pushes every change straight to the server. It also mirrors the
+  // synced slice in localStorage so app launch renders instantly while the
+  // background pull is in flight (see CACHE_KEY in cloud.jsx).
   const [state, dispatch] = useReducer(reducer, undefined, seed);
 
   const value = useMemo(() => ({ state, dispatch }), [state]);

@@ -19,11 +19,7 @@ import AnalysisReview from '../components/AnalysisReview.jsx';
 
 const NutritionCharts = lazy(() => import('../components/NutritionCharts.jsx'));
 
-const WATER_QUICK = [
-  { ml: 250, label: 'כוס 250' },
-  { ml: 500, label: 'בקבוק 500' },
-  { ml: 750, label: 'בקבוק 750' },
-];
+const WATER_CUP_ML = 250;
 
 export default function Nutrition() {
   const { state, dispatch } = useStore();
@@ -116,6 +112,41 @@ export default function Nutrition() {
             </button>
           </div>
 
+          {/* מים — שורה קומפקטית עם כפתור כוס אחד להקלקה מהירה */}
+          <GlassCard className="py-3">
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="mb-1.5 flex items-center justify-between">
+                  <h2 className="flex items-center gap-1.5 text-sm font-bold">
+                    <Droplets className="size-4" style={{ color: '#38BDF8' }} />
+                    מים
+                  </h2>
+                  <span className="tnum text-xs font-bold" style={{ color: '#38BDF8' }}>
+                    {totals.waterMl} / {nutritionGoals.waterMl} מ״ל
+                  </span>
+                </div>
+                <div className="h-2.5 overflow-hidden rounded-full bg-white/[0.06]" role="progressbar"
+                  aria-label="התקדמות מים" aria-valuenow={totals.waterMl} aria-valuemax={nutritionGoals.waterMl}>
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${Math.min(100, (totals.waterMl / nutritionGoals.waterMl) * 100)}%`,
+                      background: '#38BDF8',
+                    }}
+                  />
+                </div>
+              </div>
+              <button
+                onClick={() => { vibrate(8); dispatch({ type: 'addWater', amountMl: WATER_CUP_ML, date: selectedDate }); }}
+                aria-label={`הוספת כוס מים ${WATER_CUP_ML} מ״ל`}
+                className="press glass shrink-0 rounded-2xl px-4 py-3 text-sm font-bold"
+                style={{ color: '#38BDF8' }}
+              >
+                💧 +{WATER_CUP_ML}
+              </button>
+            </div>
+          </GlassCard>
+
           {/* טבעת קלוריות + פסי מאקרו */}
           <GlassCard className="flex flex-col items-center gap-4 py-5">
             <CalorieRing calories={totals.calories} target={nutritionGoals.calories} />
@@ -127,40 +158,6 @@ export default function Nutrition() {
             <div className="flex w-full flex-col gap-2.5">
               {MACROS.map((mac) => (
                 <MacroBar key={mac.id} macro={mac} value={totals[mac.id]} target={nutritionGoals[mac.id]} />
-              ))}
-            </div>
-          </GlassCard>
-
-          {/* מים */}
-          <GlassCard>
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="flex items-center gap-2 font-bold">
-                <Droplets className="size-5" style={{ color: '#38BDF8' }} />
-                מים
-              </h2>
-              <span className="tnum text-sm font-bold" style={{ color: '#38BDF8' }}>
-                {totals.waterMl} / {nutritionGoals.waterMl} מ״ל
-              </span>
-            </div>
-            <div className="mb-3 h-2.5 overflow-hidden rounded-full bg-white/[0.06]" role="progressbar"
-              aria-label="התקדמות מים" aria-valuenow={totals.waterMl} aria-valuemax={nutritionGoals.waterMl}>
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${Math.min(100, (totals.waterMl / nutritionGoals.waterMl) * 100)}%`,
-                  background: '#38BDF8',
-                }}
-              />
-            </div>
-            <div className="flex gap-2">
-              {WATER_QUICK.map((w) => (
-                <button
-                  key={w.ml}
-                  onClick={() => { vibrate(8); dispatch({ type: 'addWater', amountMl: w.ml, date: selectedDate }); }}
-                  className="press glass flex-1 rounded-xl py-2.5 text-xs font-bold"
-                >
-                  💧 {w.label}
-                </button>
               ))}
             </div>
           </GlassCard>
