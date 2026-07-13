@@ -80,6 +80,9 @@ export function CloudProvider({ children }) {
   const pushTimer = useRef(null);
   const retryTimer = useRef(null);
   const latestSlice = useRef(null);
+  const pendingPush = useRef(null);
+  const pushInFlight = useRef(false);
+  const pushGeneration = useRef(0);
   const dirty = useRef(false); // changes not yet pushed to the server
 
   const persistAuth = useCallback((next) => {
@@ -196,6 +199,8 @@ export function CloudProvider({ children }) {
     if (!auth?.token) return;
     clearTimeout(pushTimer.current);
     clearTimeout(retryTimer.current);
+    pendingPush.current = null;
+    pushGeneration.current += 1;
     ready.current = false;
     setStatus('syncing');
     setError('');
@@ -210,6 +215,48 @@ export function CloudProvider({ children }) {
       setError(e.message);
       throw e;
     }
+  }
+
+  async function drainPushQueue() {
+    if (pushInFlight.current) return;
+    const job = pendingPush.current;
+    if (!job) return;
+
+    pendingPush.current = null;
+    pushInFlight.current = true;
+    try {
+      saveCache(job.slice);
+      await api.putState(job.token, job.slice);
+      dirty.current = Boolean(pendingPush.current);
+      if (job.generation === pushGeneration.current) {
+        setStatus('synced');
+        setError('');
+      }
+    } catch (e) {
+      // If a newer snapshot is already queued, send that one instead of
+      // retrying this stale snapshot. Otherwise retry the failed snapshot.
+      if (job.generation === pushGeneration.current && !pendingPush.current) {
+        setStatus('error');
+        setError(e.message);
+        clearTimeout(retryTimer.current);
+        retryTimer.current = setTimeout(() => {
+          retryTimer.current = null;
+          pendingPush.current = job;
+          drainPushQueue();
+        }, 5000);
+      }
+    } finally {
+      pushInFlight.current = false;
+      if (pendingPush.current) drainPushQueue();
+    }
+  }
+
+  function enqueuePush(token, nextSlice) {
+    const generation = ++pushGeneration.current;
+    pendingPush.current = { token, slice: nextSlice, generation };
+    clearTimeout(retryTimer.current);
+    retryTimer.current = null;
+    drainPushQueue();
   }
 
   // Enroll the device fingerprint/face for quick unlock next time.
@@ -253,26 +300,7 @@ export function CloudProvider({ children }) {
     clearTimeout(pushTimer.current);
     clearTimeout(retryTimer.current);
     pushTimer.current = setTimeout(async () => {
-      saveCache(latestSlice.current); // mirror locally even if the push fails
-      try {
-        await api.putState(auth.token, latestSlice.current);
-        dirty.current = false;
-        setStatus('synced');
-      } catch (e) {
-        setStatus('error');
-        setError(e.message);
-        retryTimer.current = setTimeout(async () => {
-          try {
-            setStatus('syncing');
-            await api.putState(auth.token, latestSlice.current);
-            dirty.current = false;
-            setStatus('synced');
-          } catch (retryErr) {
-            setStatus('error');
-            setError(retryErr.message);
-          }
-        }, 5000);
-      }
+      enqueuePush(auth.token, latestSlice.current);
     }, 900);
     return () => {
       clearTimeout(pushTimer.current);
@@ -293,14 +321,7 @@ export function CloudProvider({ children }) {
       if (!auth?.token || !ready.current || !dirty.current) return;
       clearTimeout(pushTimer.current);
       clearTimeout(retryTimer.current);
-      saveCache(latestSlice.current);
-      api
-        .putState(auth.token, latestSlice.current)
-        .then(() => {
-          dirty.current = false;
-          setStatus('synced');
-        })
-        .catch(() => {}); // the debounced retry path will pick it up next time
+      enqueuePush(auth.token, latestSlice.current);
     };
     document.addEventListener('visibilitychange', flush);
     window.addEventListener('pagehide', flush);
