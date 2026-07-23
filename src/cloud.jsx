@@ -85,6 +85,7 @@ export function CloudProvider({ children }) {
   const pushInFlight = useRef(false);
   const pushGeneration = useRef(0);
   const dirty = useRef(false); // changes not yet pushed to the server
+  const prevSliceKey = useRef(null); // detects real slice changes for the pre-sync mirror
 
   const persistAuth = useCallback((next) => {
     if (next) {
@@ -294,6 +295,18 @@ export function CloudProvider({ children }) {
     if (cached) dispatch({ type: 'replaceAll', data: cached });
     if (!locked && !ready.current) reconcile(auth.token);
   }, []);
+
+  // Edits made before the initial pull completes (offline launch / server down)
+  // can't be pushed yet — mirror them into the cache so killing the app doesn't
+  // lose them. The next successful reconcile merges them into the server state
+  // (mergeLocalStateIntoServer), so nothing here can overwrite fresher data.
+  useEffect(() => {
+    const prev = prevSliceKey.current;
+    prevSliceKey.current = sliceKey;
+    if (prev === null || prev === sliceKey) return; // initial render, not an edit
+    if (!auth?.token || ready.current) return; // once synced, pushes own the cache
+    saveCache(latestSlice.current);
+  }, [sliceKey, auth?.token]);
 
   // Debounced push whenever the synced slice changes.
   useEffect(() => {
